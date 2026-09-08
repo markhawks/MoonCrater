@@ -448,6 +448,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.36' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Aggiunta migrazione automatica dei percorsi legacy verso /opt/mooncrater e /etc/mooncrater',
+                'Aggiornati VirtualHost Apache, log e contesti SELinux durante la rinomina',
+                'Aggiunto rollback automatico della migrazione filesystem in caso di errore',
+            ],
+        ],
         '1.35' => [
             'date' => '2026-09-08',
             'changes' => [

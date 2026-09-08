@@ -5,6 +5,13 @@ set -euo pipefail
 # The database, credentials and runtime data are preserved.
 
 source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# Before resolving paths, migrate a standard <=1.34 installation to the corrected name.
+if [[ -z ${MOONCRATER_INSTALL_DIR:-} && -z ${MOONCREATER_INSTALL_DIR:-} \
+      && -d /opt/mooncreater && ! -e /opt/mooncrater ]]; then
+    "$source_dir/setup/rhel10/migrate-layout.sh"
+fi
+
 install_dir="${MOONCRATER_INSTALL_DIR:-${MOONCREATER_INSTALL_DIR:-}}"
 if [[ -z $install_dir ]]; then
     if [[ -d /opt/mooncrater ]]; then install_dir=/opt/mooncrater; else install_dir=/opt/mooncreater; fi

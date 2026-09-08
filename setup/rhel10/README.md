@@ -53,9 +53,10 @@ does not change them and does not recreate the administrator. Before applying mi
 a custom-format `pg_dump` backup under `/opt/mooncrater/var/backups`. It stages and checks the new
 release before replacing the application directory, reloads Apache and performs an HTTP check.
 
-Installations created as MoonCreater through version 1.34 are detected automatically. Their legacy
-`/opt/mooncreater` and `/etc/mooncreater` paths remain in place during the rename update, while the
-displayed product name and application assets are corrected to MoonCrater. The former
+Installations created as MoonCreater through version 1.34 are detected automatically. Before the
+application update, the updater invokes `migrate-layout.sh` to rename `/opt/mooncreater` to
+`/opt/mooncrater` and `/etc/mooncreater` to `/etc/mooncrater`, then updates Apache and SELinux. The
+database itself is not renamed or modified by this filesystem migration. The former
 `MOONCREATER_*` update variables remain accepted as compatibility aliases.
 
 Application files are automatically restored if activation or the HTTP check fails. Database
