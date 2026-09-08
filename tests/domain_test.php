@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../app/Domain/inventory.php';
+require __DIR__ . '/../app/Domain/satellite_history.php';
 
 $cases = [
     [normalize_hostname(' Server01.Example.COM '), 'server01'],
@@ -26,4 +27,17 @@ if (normalize_satellite_status('', true) !== 'missing') exit(1);
 $reference = new DateTimeImmutable('2026-09-08 12:00:00 UTC');
 if (satellite_status_from_checkin('2026-08-10 12:00:00 UTC', $reference) !== 'active') exit(1);
 if (satellite_status_from_checkin('2026-08-08 11:59:59 UTC', $reference) !== 'unhealthy') exit(1);
+if (satellite_snapshot_date_from_filename('export_satellite_completo-03092026.csv')?->format('Y-m-d') !== '2026-09-03') exit(1);
+if (satellite_snapshot_date_from_filename('export-2026-07-02.csv')?->format('Y-m-d') !== '2026-07-02') exit(1);
+if (satellite_snapshot_date_from_filename('export-without-date.csv') !== null) exit(1);
+$snapshotFixture = tmpfile();
+if ($snapshotFixture === false) exit(1);
+$snapshotPath = stream_get_meta_data($snapshotFixture)['uri'];
+fwrite($snapshotFixture, "hostname;os;last_checkin\n");
+fwrite($snapshotFixture, "host1.example.test;RHEL 8.10;2026-08-31 12:00:00 UTC\n");
+fwrite($snapshotFixture, "host2.example.test;RHEL 9.6;2026-07-01 12:00:00 UTC\n");
+fflush($snapshotFixture);
+$snapshot = satellite_snapshot_read_csv($snapshotPath, new DateTimeImmutable('2026-09-03'));
+if ($snapshot['host_count'] !== 2 || ($snapshot['counts']['8.10'] ?? 0) !== 1 || isset($snapshot['counts']['9.6'])) exit(1);
+fclose($snapshotFixture);
 echo "Domain helper tests passed.\n";

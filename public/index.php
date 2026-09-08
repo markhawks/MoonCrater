@@ -1042,17 +1042,24 @@ if (file_exists('import_satellite.php')) {
         <p style="font-size: 11px; color: #85929e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">📈 Statistics &amp; views</p>
         <?php
         $stat_links = [
-            ['url' => 'statistics7.php',       'label' => 'RHEL 7 stats',  'icon' => '🔴'],
-            ['url' => 'statistics8.php',       'label' => 'RHEL 8 stats',  'icon' => '🟠'],
-            ['url' => 'statistics9.php',       'label' => 'RHEL 9 stats',  'icon' => '🟢'],
-            ['url' => 'statistics10.php',      'label' => 'RHEL 10 stats', 'icon' => '🔵'],
+            ['url' => 'statistics7.php',       'label' => 'RHEL 7 stats',  'color' => '#e74c3c'],
+            ['url' => 'statistics8.php',       'label' => 'RHEL 8 stats',  'color' => '#f39c12'],
+            ['url' => 'statistics9.php',       'label' => 'RHEL 9 stats',  'color' => '#2ecc71'],
+            ['url' => 'statistics10.php',      'label' => 'RHEL 10 stats', 'color' => '#3498db'],
             ['url' => 'kernel_stats.php',      'label' => 'Kernel stats',  'icon' => '⚙️'],
             ['url' => 'statistics_zabbix.php', 'label' => 'Zabbix stats',  'icon' => '📡'],
             ['url' => 'migration_trends.php', 'label' => 'Migration trends', 'icon' => '&#8644;'],
         ];
         foreach ($stat_links as $lnk): ?>
             <a href="<?= $lnk['url'] ?>" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03); color: #e5e8e8; text-decoration: none; font-size: 12px; transition: background 0.15s; white-space: nowrap;">
-                <span><?= $lnk['icon'] ?> <?= htmlspecialchars($lnk['label']) ?></span>
+                <span style="display: inline-flex; align-items: center; gap: 7px;">
+                    <?php if (isset($lnk['color'])): ?>
+                        <span aria-hidden="true" style="display:inline-block; width:10px; height:10px; flex:0 0 10px; border-radius:50%; background:<?= htmlspecialchars($lnk['color']) ?>;"></span>
+                    <?php else: ?>
+                        <span aria-hidden="true"><?= $lnk['icon'] ?></span>
+                    <?php endif; ?>
+                    <?= htmlspecialchars($lnk['label']) ?>
+                </span>
                 <span style="color: #7f8c8d; margin-left: 6px;">›</span>
             </a>
         <?php endforeach; ?>

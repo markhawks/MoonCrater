@@ -31,6 +31,17 @@ if ($isCli) {
     $file = $upload['tmp_name'];
 }
 $sourceFilename = $isCli ? basename($file) : basename((string)($upload['name'] ?? 'satellite.csv'));
+require_once __DIR__ . '/../app/Domain/satellite_history.php';
+$snapshotDate = satellite_snapshot_date_from_filename($sourceFilename);
+if (!$snapshotDate || $snapshotDate > new DateTimeImmutable('today')) $snapshotDate = new DateTimeImmutable('today');
+$snapshotReference = new DateTimeImmutable(
+    $snapshotDate->format('Y-m-d') . ' 23:59:59',
+    new DateTimeZone(date_default_timezone_get())
+);
+$snapshotImportedAt = new DateTimeImmutable(
+    $snapshotDate->format('Y-m-d') . ' 12:00:00',
+    new DateTimeZone(date_default_timezone_get())
+);
 
 $handle = fopen($file, 'rb');
 if ($handle === false) {
@@ -98,7 +109,9 @@ try {
 
         $os = trim((string)($data[$columns['os']] ?? 'N/A'));
         $snapshotHosts[$hostname] = null;
-        if ($csvStatus === 'active' && preg_match('/\b(?:Red Hat Enterprise Linux|RedHat|RHEL(?: Server)?)\D*(10|[789])(?:\.(\d+))?/i', $os, $versionMatch)) {
+        $snapshotIsActive = $sourceIsActive
+            && satellite_status_from_checkin($lastCheckin, $snapshotReference) === 'active';
+        if ($snapshotIsActive && preg_match('/\b(?:Red Hat Enterprise Linux|RedHat|RHEL(?: Server)?)\D*(10|[789])(?:\.(\d+))?/i', $os, $versionMatch)) {
             $snapshotHosts[$hostname] = $versionMatch[1] . (isset($versionMatch[2]) && $versionMatch[2] !== '' ? '.' . $versionMatch[2] : '');
         }
 
@@ -126,17 +139,20 @@ try {
           )
     ");
 
+    $replaceRunStmt = $pdo->prepare('DELETE FROM satellite_import_runs WHERE imported_at::date = ?');
+    $replaceRunStmt->execute([$snapshotDate->format('Y-m-d')]);
     $runStmt = $pdo->prepare("
         INSERT INTO satellite_import_runs
-            (source_filename, imported_count, skipped_count, missing_count, has_status_column)
-        VALUES (?, ?, ?, ?, ?)
+            (imported_at, source_filename, imported_count, skipped_count, missing_count, has_status_column)
+        VALUES (?, ?, ?, ?, ?, ?)
         RETURNING id
     ");
-    $runStmt->bindValue(1, $sourceFilename, PDO::PARAM_STR);
-    $runStmt->bindValue(2, $importCount, PDO::PARAM_INT);
-    $runStmt->bindValue(3, $skippedCount, PDO::PARAM_INT);
-    $runStmt->bindValue(4, $missingCount, PDO::PARAM_INT);
-    $runStmt->bindValue(5, $statusColumn !== null, PDO::PARAM_BOOL);
+    $runStmt->bindValue(1, $snapshotImportedAt->format(DateTimeInterface::ATOM), PDO::PARAM_STR);
+    $runStmt->bindValue(2, $sourceFilename, PDO::PARAM_STR);
+    $runStmt->bindValue(3, $importCount, PDO::PARAM_INT);
+    $runStmt->bindValue(4, $skippedCount, PDO::PARAM_INT);
+    $runStmt->bindValue(5, $missingCount, PDO::PARAM_INT);
+    $runStmt->bindValue(6, $statusColumn !== null, PDO::PARAM_BOOL);
     $runStmt->execute();
     $runId = (int)$runStmt->fetchColumn();
     $snapshotCounts = [];
@@ -158,6 +174,7 @@ try {
             'missing' => $missingCount,
             'has_status_column' => $statusColumn !== null,
             'run_id' => $runId,
+            'snapshot_date' => $snapshotDate->format('Y-m-d'),
         ]);
         header('Location: index.php?' . http_build_query([
             'import_success' => $importCount,

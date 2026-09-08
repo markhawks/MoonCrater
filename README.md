@@ -169,6 +169,15 @@ php public/import_ivanti.php /path/to/ivanti.csv
 Historical CSV files must be imported from the Migration Trends page. Historical imports create
 snapshots only and never alter the current operational inventory.
 
+Snapshot dates can be inferred from filenames containing `DDMMYYYY`, `YYYY-MM-DD`, or `YYYYMMDD`.
+The chart positions points proportionally along the real time axis. The page also supports folder
+upload and an inventory-safe history reset. To rebuild history from a directory already stored on
+the server, run:
+
+```bash
+sudo php bin/import-satellite-history-dir.php /path/to/satellite-exports
+```
+
 ## Zabbix import
 
 The Zabbix import is intentionally CLI-only:

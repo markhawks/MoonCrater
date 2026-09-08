@@ -128,9 +128,22 @@ selezionata, usando le ore 23:59:59 come riferimento.
 La pagina mostra:
 
 - andamento RHEL 7, 8, 9 e 10;
-- date degli import sull'asse X;
+- date degli snapshot sull'asse X, distanziate in proporzione al tempo trascorso;
 - numero di host su ogni punto;
 - quattro tabelle diff, una per ogni major release.
+
+La data manuale del singolo import e opzionale: se non viene indicata, viene estratta dal nome del
+file (`DDMMYYYY`, `YYYY-MM-DD` o `YYYYMMDD`). Se esiste gia uno snapshot nella stessa data, il nuovo
+import lo sostituisce. Gli amministratori possono azzerare esclusivamente grafico e storico, senza
+toccare l'inventario operativo, oppure selezionare una cartella locale dal browser.
+
+Per ricostruire lo storico usando una directory gia presente sul server:
+
+```bash
+sudo php bin/import-satellite-history-dir.php /percorso/export-satellite
+```
+
+Il comando ignora i CSV non Satellite e quelli privi di data nel nome.
 
 ## Import Zabbix
 

@@ -13,7 +13,7 @@ for removed in add_admin.php add_user.php add_users.php; do
     test ! -e "public/$removed"
 done
 
-for endpoint in action.php action_infra.php action_zabbix.php backup_db.php import_ivanti.php save_note.php toggle_decommission.php; do
+for endpoint in action.php action_infra.php action_zabbix.php backup_db.php import_ivanti.php import_satellite_history.php reset_satellite_history.php save_note.php toggle_decommission.php; do
     test -s "public/$endpoint"
     grep -q "require_admin" "public/$endpoint"
     grep -q "require_csrf" "public/$endpoint"
@@ -21,6 +21,7 @@ for endpoint in action.php action_infra.php action_zabbix.php backup_db.php impo
 done
 
 grep -q "PHP_SAPI !== 'cli'" bin/import_zabbix.php
+grep -q "PHP_SAPI !== 'cli'" bin/import-satellite-history-dir.php
 grep -q "session_regenerate_id" public/login.php
 grep -q "PDO::PARAM_BOOL" public/import_satellite.php
 test "$(find public -maxdepth 1 -type f ! -name '*.php' ! -name '.htaccess' | wc -l)" -eq 0
