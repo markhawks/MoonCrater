@@ -1,0 +1,16 @@
+<VirtualHost *:80>
+    ServerName mooncrater.example.test
+    DocumentRoot /opt/mooncrater/public
+
+    <Directory /opt/mooncrater/public>
+        Options -Indexes +FollowSymLinks
+        AllowOverride FileInfo Options AuthConfig Limit
+        Require all granted
+    </Directory>
+
+    # Keep real values in a root-owned local file, not in Git.
+    IncludeOptional /etc/mooncrater/apache-env.conf
+
+    ErrorLog logs/mooncrater-error.log
+    CustomLog logs/mooncrater-access.log combined
+</VirtualHost>

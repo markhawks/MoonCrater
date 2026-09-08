@@ -130,8 +130,8 @@ $users = $pdo->query("SELECT id, username, role, created_at, last_password_reset
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings — MoonCreater</title>
-    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncreater-130.png">
+    <title>Settings — MoonCrater</title>
+    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncrater-130.png">
     <link rel="stylesheet" href="assets/css/base.css">
     <link rel="stylesheet" href="assets/css/components.css">
     <link rel="stylesheet" href="assets/css/style-settings.css">
@@ -144,10 +144,10 @@ $users = $pdo->query("SELECT id, username, role, created_at, last_password_reset
     <!-- HEADER PAGINA -->
     <div class="settings-header">
         <div class="settings-header-left">
-            <img src="assets/img/mooncreater-icon-v2.png" alt="MoonCreater" style="height:36px; width:36px; object-fit:contain;">
+            <img src="assets/img/mooncrater-icon-v2.png" alt="MoonCrater" style="height:36px; width:36px; object-fit:contain;">
             <div>
                 <div class="settings-title">⚙️ Settings</div>
-                <div class="settings-subtitle">MoonCreater — Administration</div>
+                <div class="settings-subtitle">MoonCrater — Administration</div>
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">

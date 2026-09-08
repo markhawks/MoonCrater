@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../public/assets/img/mooncreater-icon-v2.png" alt="Logo MoonCreater" width="180">
+  <img src="../public/assets/img/mooncrater-icon-v2.png" alt="Logo MoonCrater" width="180">
 </p>
 
-# MoonCreater - Infrastructure Control Plane Patching
+# MoonCrater - Infrastructure Control Plane Patching
 
 [English (primary README)](../README.md)
 
@@ -11,13 +11,13 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.34**.
+Versione applicativa corrente: **1.35**.
 
 Asset branding:
 
-- `docs/MoonCreaterIcon-original.jpeg`: artwork originale fornito dall'autore;
-- `public/assets/img/mooncreater-icon-v2.png`: icona prodotto;
-- `public/assets/img/favicon-mooncreater-130.png`: favicon;
+- `docs/MoonCraterIcon-original.jpeg`: artwork originale fornito dall'autore;
+- `public/assets/img/mooncrater-icon-v2.png`: icona prodotto;
+- `public/assets/img/favicon-mooncrater-130.png`: favicon;
 - `public/assets/img/customer-default.svg`: logo cliente predefinito.
 
 ## Struttura del progetto
@@ -59,7 +59,7 @@ Variabili opzionali:
 - `DB_PORT` (default `5432`)
 - `DB_NAME` (default `patching`)
 - `APP_TIMEZONE` (default `Europe/Rome`)
-- `APP_NAME` (default `MoonCreater`)
+- `APP_NAME` (default `MoonCrater`)
 - `APP_SUBTITLE` (default `Infrastructure Control Plane Patching`)
 - `CUSTOMER_NAME` (default `Acme Corporation`)
 - `CUSTOMER_LOGO` (default `assets/img/customer-default.svg`; percorso immagine same-origin)
@@ -179,9 +179,9 @@ struttura interna.
 
 ## Licenza
 
-Copyright © 2026 MoonCreater contributors.
+Copyright © 2026 MoonCrater contributors.
 
-MoonCreater è distribuito secondo la **GNU Affero General Public License, versione 3 o successiva**
+MoonCrater è distribuito secondo la **GNU Affero General Public License, versione 3 o successiva**
 (`AGPL-3.0-or-later`). Le versioni modificate distribuite o rese disponibili agli utenti tramite
 rete devono rispettare gli obblighi di copyleft e disponibilità del codice sorgente previsti dalla
 licenza. Consultare il file `LICENSE` per i termini completi.

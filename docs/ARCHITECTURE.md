@@ -1,6 +1,6 @@
 # Architecture
 
-MoonCreater is a server-rendered PHP application backed by PostgreSQL. Apache must expose only
+MoonCrater is a server-rendered PHP application backed by PostgreSQL. Apache must expose only
 `public/`; application code, migrations, tests, sample imports and documentation stay outside the
 web root.
 

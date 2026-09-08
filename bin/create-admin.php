@@ -7,10 +7,10 @@ require __DIR__ . '/../app/config.php';
 
 $username = trim($argv[1] ?? '');
 if ($username === '') {
-    fwrite(STDERR, "Usage: bin/create-admin.php USERNAME\nPassword is read from MOONCREATER_ADMIN_PASSWORD or requested interactively.\n");
+    fwrite(STDERR, "Usage: bin/create-admin.php USERNAME\nPassword is read from MOONCRATER_ADMIN_PASSWORD or requested interactively.\n");
     exit(2);
 }
-$password = getenv('MOONCREATER_ADMIN_PASSWORD') ?: '';
+$password = getenv('MOONCRATER_ADMIN_PASSWORD') ?: '';
 if ($password === '') {
     fwrite(STDOUT, 'Password: ');
     if (function_exists('shell_exec')) shell_exec('stty -echo');

@@ -3,7 +3,7 @@
 This directory contains the dedicated installer for a new Red Hat Enterprise Linux 10 server.
 It is intentionally separate from the generic file-copy installer in `setup/install.sh`.
 
-Run it from a cloned MoonCreater repository:
+Run it from a cloned MoonCrater repository:
 
 ```bash
 sudo ./setup/rhel10/install.sh
@@ -17,9 +17,9 @@ migrations, creates the administrator and enables PostgreSQL and Apache at boot.
 Defaults can be changed with environment variables:
 
 ```bash
-sudo MOONCREATER_SERVER_NAME=mooncreater.example.com \
-  MOONCREATER_ADMIN_USER=admin \
-  MOONCREATER_INSTALL_DIR=/opt/mooncreater \
+sudo MOONCRATER_SERVER_NAME=mooncrater.example.com \
+  MOONCRATER_ADMIN_USER=admin \
+  MOONCRATER_INSTALL_DIR=/opt/mooncrater \
   ./setup/rhel10/install.sh
 ```
 
@@ -27,15 +27,15 @@ Supported variables:
 
 | Variable | Default |
 |---|---|
-| `MOONCREATER_INSTALL_DIR` | `/opt/mooncreater` |
-| `MOONCREATER_DB_NAME` | `mooncreater` |
-| `MOONCREATER_DB_USER` | `mooncreater` |
-| `MOONCREATER_SERVER_NAME` | System FQDN (`hostname -f`) |
-| `MOONCREATER_ADMIN_USER` | `admin` |
-| `MOONCREATER_CONFIGURE_FIREWALL` | `yes` |
+| `MOONCRATER_INSTALL_DIR` | `/opt/mooncrater` |
+| `MOONCRATER_DB_NAME` | `mooncrater` |
+| `MOONCRATER_DB_USER` | `mooncrater` |
+| `MOONCRATER_SERVER_NAME` | System FQDN (`hostname -f`) |
+| `MOONCRATER_ADMIN_USER` | `admin` |
+| `MOONCRATER_CONFIGURE_FIREWALL` | `yes` |
 
-For automation, passwords may be supplied as `MOONCREATER_DB_PASSWORD` and
-`MOONCREATER_ADMIN_PASSWORD`. Avoid shell history and use a protected environment file or a secret
+For automation, passwords may be supplied as `MOONCRATER_DB_PASSWORD` and
+`MOONCRATER_ADMIN_PASSWORD`. Avoid shell history and use a protected environment file or a secret
 manager. HTTPS is deliberately not configured because its setup depends on the site's DNS name and
 certificate source.
 
@@ -48,10 +48,15 @@ git pull --ff-only origin main
 sudo ./setup/rhel10/update.sh
 ```
 
-The updater reads the existing database credentials from `/etc/mooncreater/apache-env.conf`; it
+The updater reads the existing database credentials from `/etc/mooncrater/apache-env.conf`; it
 does not change them and does not recreate the administrator. Before applying migrations it creates
-a custom-format `pg_dump` backup under `/opt/mooncreater/var/backups`. It stages and checks the new
+a custom-format `pg_dump` backup under `/opt/mooncrater/var/backups`. It stages and checks the new
 release before replacing the application directory, reloads Apache and performs an HTTP check.
+
+Installations created as MoonCreater through version 1.34 are detected automatically. Their legacy
+`/opt/mooncreater` and `/etc/mooncreater` paths remain in place during the rename update, while the
+displayed product name and application assets are corrected to MoonCrater. The former
+`MOONCREATER_*` update variables remain accepted as compatibility aliases.
 
 Application files are automatically restored if activation or the HTTP check fails. Database
 migrations are not automatically reversed: use the reported PostgreSQL backup for a coordinated
@@ -61,8 +66,8 @@ Optional update variables:
 
 | Variable | Default |
 |---|---|
-| `MOONCREATER_INSTALL_DIR` | `/opt/mooncreater` |
-| `MOONCREATER_ENV_FILE` | `/etc/mooncreater/apache-env.conf` |
-| `MOONCREATER_BACKUP_DIR` | `/opt/mooncreater/var/backups` |
-| `MOONCREATER_HEALTH_URL` | `http://127.0.0.1/` |
-| `MOONCREATER_ALLOW_DIRTY_SOURCE` | `no` |
+| `MOONCRATER_INSTALL_DIR` | `/opt/mooncrater` |
+| `MOONCRATER_ENV_FILE` | `/etc/mooncrater/apache-env.conf` |
+| `MOONCRATER_BACKUP_DIR` | `/opt/mooncrater/var/backups` |
+| `MOONCRATER_HEALTH_URL` | `http://127.0.0.1/` |
+| `MOONCRATER_ALLOW_DIRTY_SOURCE` | `no` |

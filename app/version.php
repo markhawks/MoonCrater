@@ -1,4 +1,4 @@
 <?php
 declare(strict_types=1);
 
-const APP_VERSION = '1.34';
+const APP_VERSION = '1.35';

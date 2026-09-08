@@ -53,8 +53,8 @@ foreach ($kernel_stats as $stat) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kernel Statistics — MoonCreater</title>
-    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncreater-130.png">
+    <title>Kernel Statistics — MoonCrater</title>
+    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncrater-130.png">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         body {

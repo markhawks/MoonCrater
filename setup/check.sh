@@ -10,5 +10,5 @@ bash -n setup/*.sh setup/rhel10/*.sh tests/*.sh
 bash tests/static_checks.sh
 php tests/domain_test.php
 test -f public/.htaccess
-test -f public/assets/img/favicon-mooncreater-130.png
-echo 'MoonCreater preflight checks passed.'
+test -f public/assets/img/favicon-mooncrater-130.png
+echo 'MoonCrater preflight checks passed.'

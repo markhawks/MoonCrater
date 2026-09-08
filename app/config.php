@@ -9,7 +9,8 @@ ini_set('log_errors', '1');
 error_reporting(E_ALL);
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Europe/Rome');
 
-$appName = getenv('APP_NAME') ?: 'MoonCreater';
+$appName = getenv('APP_NAME') ?: 'MoonCrater';
+if ($appName === 'MoonCreater') $appName = 'MoonCrater'; // compatibility with installations <= 1.34
 $appSubtitle = getenv('APP_SUBTITLE') ?: 'Infrastructure Control Plane Patching';
 $appVersion = APP_VERSION;
 $customerName = getenv('CUSTOMER_NAME') ?: 'Acme Corporation';

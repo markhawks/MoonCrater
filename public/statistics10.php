@@ -73,7 +73,7 @@ foreach ($satellite_hosts as $host) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Satellite Statistics - RHEL 10</title>
-    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncreater-130.png">
+    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncrater-130.png">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         body { background-color: #1a252f; color: #e5e8e8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }

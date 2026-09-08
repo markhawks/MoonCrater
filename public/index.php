@@ -418,8 +418,8 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
 <html>
 
 <head>
-    <title>MoonCreater - Infrastructure Control Plane Patching</title>
-    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncreater-130.png">
+    <title>MoonCrater - Infrastructure Control Plane Patching</title>
+    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncrater-130.png">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         /* Host esclusi dai conteggi: grigio opaco, testo tenue, dati ancora leggibili */
@@ -448,6 +448,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.35' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Corretto il nome del prodotto da MoonCreater a MoonCrater',
+                'Rinominati logo, favicon, configurazione Apache e riferimenti del progetto',
+                'Mantenuta compatibilita automatica con installazioni e configurazioni precedenti',
+            ],
+        ],
         '1.34' => [
             'date' => '2026-09-08',
             'changes' => [
@@ -495,7 +503,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
                 'Logo Customer salvato nella tabella app_settings e applicato a login e header del portale',
                 'Aggiunta data ultimo reset password alla gestione utenti',
                 'Corretta la rimozione utenti e la selezione delle azioni amministrative in Settings',
-                'Favicon MoonCreater aggiornata su tutte le pagine con cache busting',
+                'Favicon MoonCrater aggiornata su tutte le pagine con cache busting',
                 'Versione software centralizzata e mostrata nel login',
                 'Corretti errori JavaScript preesistenti nelle funzioni di esportazione CSV',
             ],
@@ -511,8 +519,8 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         '1.28' => [
             'date' => '2026-09-06',
             'changes' => [
-                'Rebranding open source: MoonCreater - Infrastructure Control Plane Patching',
-                'Nuova icona MoonCreater derivata dall artwork originale e favicon applicativa',
+                'Rebranding open source: MoonCrater - Infrastructure Control Plane Patching',
+                'Nuova icona MoonCrater derivata dall artwork originale e favicon applicativa',
                 'Rimossi dal portale i loghi e i riferimenti specifici di azienda e cliente',
                 'Cliente configurabile tramite CUSTOMER_NAME e CUSTOMER_LOGO con default Acme Corporation',
                 'Aggiunto monogramma cliente neutro utilizzato come asset predefinito',
@@ -612,9 +620,9 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
          ============================================================ -->
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; margin-bottom: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; gap: 16px;">
 
-        <!-- SINISTRA: identita MoonCreater -->
+        <!-- SINISTRA: identita MoonCrater -->
         <div style="display: flex; align-items: center; gap: 16px;">
-            <img src="assets/img/mooncreater-icon-v2.png" alt="MoonCreater" style="height: 48px; width: 48px; object-fit: contain;">
+            <img src="assets/img/mooncrater-icon-v2.png" alt="MoonCrater" style="height: 48px; width: 48px; object-fit: contain;">
             <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 16px;">
                 <div style="font-size: 18px; font-weight: 700; color: #e5e8e8; letter-spacing: 0.3px; line-height: 1.2;">
                     <?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?>
@@ -673,7 +681,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
                 <div>
                     <div style="font-size: 16px; font-weight: 700; color: #e5e8e8;">📋 Changelog</div>
-                    <div style="font-size: 11px; color: #7f8c8d; margin-top: 2px;">MoonCreater — Infrastructure Control Plane Patching</div>
+                    <div style="font-size: 11px; color: #7f8c8d; margin-top: 2px;">MoonCrater — Infrastructure Control Plane Patching</div>
                 </div>
                 <button onclick="document.getElementById('changelog-modal').style.display='none'"
                         style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; color: #abb2b9; padding: 6px 12px; cursor: pointer; font-size: 13px;">✕ Close</button>

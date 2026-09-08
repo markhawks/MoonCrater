@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/assets/img/mooncreater-icon-v2.png" alt="MoonCreater logo" width="220">
+  <img src="public/assets/img/mooncrater-icon-v2.png" alt="MoonCrater logo" width="220">
 </p>
 
-<h1 align="center">MoonCreater</h1>
+<h1 align="center">MoonCrater</h1>
 
 <p align="center">
   <strong>Infrastructure Control Plane Patching</strong><br>
@@ -20,11 +20,11 @@
   English · <a href="docs/README.it.md">Italiano</a>
 </p>
 
-MoonCreater provides a unified operational view of Linux patching inventories. It highlights
+MoonCrater provides a unified operational view of Linux patching inventories. It highlights
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.34**.
+Current application version: **1.35**.
 
 ## Features
 
@@ -71,13 +71,13 @@ No container runtime is required.
 Clone the repository and run the installer as root:
 
 ```bash
-git clone https://github.com/markhawks/MoonCreater.git
-cd MoonCreater
+git clone https://github.com/markhawks/MoonCrater.git
+cd MoonCrater
 sudo ./setup/install.sh
 ```
 
-The default installation path is `/opt/mooncreater`. It can be changed with
-`MOONCREATER_INSTALL_DIR`.
+The default installation path is `/opt/mooncrater`. It can be changed with
+`MOONCRATER_INSTALL_DIR`.
 
 Create a PostgreSQL database owned by a dedicated application user. Configure the variables shown
 in `.env.example`, then run:
@@ -88,7 +88,7 @@ php bin/create-admin.php admin
 ./setup/check.sh
 ```
 
-Install and adapt `setup/apache/mooncreater.conf.example`, validate the Apache configuration, and
+Install and adapt `setup/apache/mooncrater.conf.example`, validate the Apache configuration, and
 reload the service:
 
 ```bash
@@ -123,7 +123,7 @@ Optional variables:
 | `DB_PORT` | `5432` |
 | `DB_NAME` | `patching` |
 | `APP_TIMEZONE` | `Europe/Rome` |
-| `APP_NAME` | `MoonCreater` |
+| `APP_NAME` | `MoonCrater` |
 | `APP_SUBTITLE` | `Infrastructure Control Plane Patching` |
 | `CUSTOMER_NAME` | `Acme Corporation` |
 | `CUSTOMER_LOGO` | `assets/img/customer-default.svg` |
@@ -135,7 +135,7 @@ Never commit real credentials, customer inventories, database dumps, or producti
 `bin/migrate.php` applies migrations in filename order and records their SHA-256 checksums in
 `schema_migrations`. Migration `000_initial_schema.sql` supports installation on an empty database.
 
-Run migrations with a database account that owns the MoonCreater schema:
+Run migrations with a database account that owns the MoonCrater schema:
 
 ```bash
 php bin/migrate.php
@@ -199,9 +199,9 @@ See [Contributing](CONTRIBUTING.md) before submitting a change. Security issues 
 
 ## License
 
-Copyright © 2026 MoonCreater contributors.
+Copyright © 2026 MoonCrater contributors.
 
-MoonCreater is licensed under the **GNU Affero General Public License, version 3 or later**
+MoonCrater is licensed under the **GNU Affero General Public License, version 3 or later**
 (`AGPL-3.0-or-later`). Modified versions distributed or made available to users over a network must
 comply with the license's copyleft and corresponding-source requirements. See [LICENSE](LICENSE) and
 [NOTICE](NOTICE) for the complete terms and notice.

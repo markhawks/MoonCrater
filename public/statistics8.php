@@ -55,7 +55,7 @@ uksort($minor_distribution, 'strnatcasecmp');
 <head>
     <meta charset="UTF-8">
     <title>Satellite Statistics - RHEL 8</title>
-    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncreater-130.png">
+    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncrater-130.png">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         body { background-color: #1a252f; color: #e5e8e8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }

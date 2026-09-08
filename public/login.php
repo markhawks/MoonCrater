@@ -48,10 +48,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In — MoonCreater</title>
-    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncreater-130.png">
-    <link rel="shortcut icon" type="image/png" href="assets/img/favicon-mooncreater-130.png">
-    <link rel="apple-touch-icon" href="assets/img/favicon-mooncreater-130.png">
+    <title>Sign In — MoonCrater</title>
+    <link rel="icon" type="image/png" sizes="any" href="assets/img/favicon-mooncrater-130.png">
+    <link rel="shortcut icon" type="image/png" href="assets/img/favicon-mooncrater-130.png">
+    <link rel="apple-touch-icon" href="assets/img/favicon-mooncrater-130.png">
     <link rel="stylesheet" href="assets/css/base.css">
     <link rel="stylesheet" href="assets/css/components.css">
     <link rel="stylesheet" href="assets/css/style-login.css">
@@ -70,9 +70,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
          ============================================= -->
     <div class="login-brand">
 
-        <!-- MoonCreater product logo -->
-        <img src="assets/img/mooncreater-icon-v2.png"
-             alt="MoonCreater"
+        <!-- MoonCrater product logo -->
+        <img src="assets/img/mooncrater-icon-v2.png"
+             alt="MoonCrater"
              class="brand-product-logo">
 
         <!-- Nome prodotto -->
@@ -150,9 +150,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             </form>
 
             <div class="login-footer">
-                © <?= date('Y') ?> MoonCreater &nbsp;·&nbsp; Infrastructure Control Plane Patching<br>
+                © <?= date('Y') ?> MoonCrater &nbsp;·&nbsp; Infrastructure Control Plane Patching<br>
                 <span style="opacity: 0.6;">Unauthorized access is prohibited</span><br>
-                <a href="https://github.com/markhawks/MoonCreater" rel="noopener noreferrer" style="color:inherit;opacity:.75;">Source code · AGPL-3.0-or-later</a>
+                <a href="https://github.com/markhawks/MoonCrater" rel="noopener noreferrer" style="color:inherit;opacity:.75;">Source code · AGPL-3.0-or-later</a>
             </div>
 
     </div><!-- /login-form-col -->
