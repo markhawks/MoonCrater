@@ -1,171 +1,192 @@
-# MoonCreater - Infrastructure Control Plane Patching
+<p align="center">
+  <img src="public/assets/img/mooncreater-icon-v2.png" alt="MoonCreater logo" width="220">
+</p>
 
-[![License: AGPL v3 or later](https://img.shields.io/badge/License-AGPL_v3_or_later-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
+<h1 align="center">MoonCreater</h1>
 
-Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
-Red Hat Satellite e Zabbix.
+<p align="center">
+  <strong>Infrastructure Control Plane Patching</strong><br>
+  A PHP and PostgreSQL portal for correlating Linux inventories from Ivanti, Red Hat Satellite,
+  and Zabbix.
+</p>
 
-Versione applicativa corrente: **1.31**.
+<p align="center">
+  <a href="https://www.gnu.org/licenses/agpl-3.0.html"><img src="https://img.shields.io/badge/License-AGPL_v3_or_later-blue.svg" alt="License: AGPL v3 or later"></a>
+  <img src="https://img.shields.io/badge/PHP-8%2B-777BB4.svg" alt="PHP 8+">
+  <img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1.svg" alt="PostgreSQL 16+">
+</p>
 
-Asset branding:
+<p align="center">
+  English · <a href="docs/README.it.md">Italiano</a>
+</p>
 
-- `docs/MoonCreaterIcon-original.jpeg`: artwork originale fornito dall'autore;
-- `public/assets/img/mooncreater-icon-v2.png`: icona prodotto;
-- `public/assets/img/favicon-mooncreater-130.png`: favicon;
-- `public/assets/img/customer-default.svg`: logo cliente predefinito.
+MoonCreater provides a unified operational view of Linux patching inventories. It highlights
+missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
+infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-## Struttura del progetto
+Current application version: **1.31**.
 
-Apache deve pubblicare esclusivamente `public/`. Il codice applicativo è in `app/`, i comandi
-amministrativi in `bin/`, le migrazioni in `migrations/` e i dati runtime in `var/`.
-Vedere `docs/ARCHITECTURE.md` per i confini e le responsabilità delle directory.
+## Features
 
-## Funzioni principali
+- Unified Ivanti and Red Hat Satellite inventory.
+- Host states: `active`, `unhealthy`, `missing`, and `excluded`.
+- Dedicated management for Satellite and Capsule infrastructure hosts.
+- RHEL 7, 8, 9, and 10 inventory and kernel statistics.
+- Historical Satellite imports with migration charts and per-release differences.
+- Zabbix inventory and migration progress.
+- Patching notes and planned migration dates.
+- Administrator and read-only user roles.
+- Configurable customer name and logo.
+- CSRF protection, hardened sessions, authorization checks, and audit events.
 
-- Dashboard unificata degli host Linux.
-- Confronto tra inventari Ivanti e Satellite.
-- Stati `active`, `unhealthy`, `missing` ed `excluded`.
-- Gestione separata degli host infrastrutturali Satellite e Capsule.
-- Statistiche dedicate per RHEL 7, 8, 9 e 10.
-- Inventario e avanzamento della migrazione Zabbix.
-- Storico degli import Satellite con grafico e diff per minor release RHEL.
-- Gestione utenti con ruoli `admin` e `user`.
-- Gestione del logo Customer da Settings, con ripristino dell'icona predefinita.
-- Assegnazione amministrativa degli hostname ai ruoli Satellite e Capsule.
+## Project layout
 
-## Requisiti e configurazione
+Apache must expose only the `public/` directory.
 
-Sono richiesti Apache HTTPD, PHP con PDO PostgreSQL e PostgreSQL. In produzione
-il portale deve essere pubblicato tramite HTTPS.
-
-Configurare nel servizio web o nel secret manager le variabili elencate in
-`.env.example`. Il file `.env` non viene letto automaticamente e non deve essere
-pubblicato.
-
-Variabili obbligatorie:
-
-- `DB_USER`
-- `DB_PASS`
-
-Variabili opzionali:
-
-- `DB_HOST` (default `localhost`)
-- `DB_PORT` (default `5432`)
-- `DB_NAME` (default `patching`)
-- `APP_TIMEZONE` (default `Europe/Rome`)
-- `APP_NAME` (default `MoonCreater`)
-- `APP_SUBTITLE` (default `Infrastructure Control Plane Patching`)
-- `CUSTOMER_NAME` (default `Acme Corporation`)
-- `CUSTOMER_LOGO` (default `assets/img/customer-default.svg`; percorso immagine same-origin)
-
-Apache deve usare `public/` come `DocumentRoot` e consentire le direttive presenti in
-`public/.htaccess` usando almeno:
-
-```apache
-AllowOverride FileInfo Options AuthConfig Limit
+```text
+app/          Application bootstrap, configuration, security, and domain code
+bin/          CLI migration, administration, and import commands
+docs/         Architecture, installation, and translated documentation
+migrations/   Ordered PostgreSQL migrations
+public/       PHP web endpoints and static assets — the Apache DocumentRoot
+setup/        Installer, preflight checks, and Apache examples
+tests/        Static security and domain tests
+var/          Local runtime data, ignored by Git
 ```
 
-## Migrazioni database
+See [Architecture](docs/ARCHITECTURE.md) for more detail.
 
-Con le variabili database disponibili nell'ambiente, applicare tutte le migrazioni in ordine:
+## Requirements
+
+- Apache HTTP Server
+- PHP 8 or later with PDO PostgreSQL support
+- PostgreSQL
+- `psql` and `rg` for installation checks
+- HTTPS for production deployments
+
+No container runtime is required.
+
+## Installation
+
+Clone the repository and run the installer as root:
+
+```bash
+git clone https://github.com/markhawks/MoonCreater.git
+cd MoonCreater
+sudo ./setup/install.sh
+```
+
+The default installation path is `/opt/mooncreater`. It can be changed with
+`MOONCREATER_INSTALL_DIR`.
+
+Create a PostgreSQL database owned by a dedicated application user. Configure the variables shown
+in `.env.example`, then run:
 
 ```bash
 php bin/migrate.php
 php bin/create-admin.php admin
+./setup/check.sh
 ```
 
-La migrazione `000` rende installabile un database vuoto. La migrazione `003` crea la baseline
-solo se non esistono run storici. Include
-esclusivamente host `active` ed esclude i ruoli `satellite` e `capsule`.
-
-## Import Satellite corrente
-
-L'import operativo è disponibile agli amministratori dalla dashboard oppure da CLI:
+Install and adapt `setup/apache/mooncreater.conf.example`, validate the Apache configuration, and
+reload the service:
 
 ```bash
-php public/import_satellite.php /percorso/inventario_satellite.csv
+apachectl configtest
+sudo systemctl reload httpd
 ```
 
-Se il percorso non è specificato, viene usato il CSV corrente nella directory
-`satellite-import-csv/`.
+For the complete procedure, see [Installation](docs/INSTALL.md).
 
-Regole applicate:
+## Configuration
 
-- un host `excluded` resta escluso;
-- un host presente con check-in entro 3 giorni diventa `active`;
-- un host presente con check-in vecchio, assente o non valido diventa `unhealthy`;
-- un host assente dal nuovo CSV diventa `missing`;
-- i ruoli `satellite` e `capsule` non vengono modificati.
+Required environment variables:
 
-L'import è transazionale e registra automaticamente uno snapshot storico dei soli
-host RHEL attivi.
+| Variable | Description |
+|---|---|
+| `DB_USER` | Dedicated PostgreSQL user |
+| `DB_PASS` | PostgreSQL password |
 
-## Import Satellite storico e trend
+Optional variables:
 
-La pagina `migration_trends.php` consente agli amministratori di caricare vecchi
-CSV indicando la data dello snapshot. Questo import non modifica l'inventario
-operativo, gli stati, i check-in o le esclusioni correnti.
+| Variable | Default |
+|---|---|
+| `DB_HOST` | `localhost` |
+| `DB_PORT` | `5432` |
+| `DB_NAME` | `patching` |
+| `APP_TIMEZONE` | `Europe/Rome` |
+| `APP_NAME` | `MoonCreater` |
+| `APP_SUBTITLE` | `Infrastructure Control Plane Patching` |
+| `CUSTOMER_NAME` | `Acme Corporation` |
+| `CUSTOMER_LOGO` | `assets/img/customer-default.svg` |
 
-Sono considerati attivi soltanto gli host con check-in entro 3 giorni dalla data
-selezionata, usando le ore 23:59:59 come riferimento.
+Never commit real credentials, customer inventories, database dumps, or production configuration.
 
-La pagina mostra:
+## Database migrations
 
-- andamento RHEL 7, 8, 9 e 10;
-- date degli import sull'asse X;
-- numero di host su ogni punto;
-- quattro tabelle diff, una per ogni major release.
+`bin/migrate.php` applies migrations in filename order and records their SHA-256 checksums in
+`schema_migrations`. Migration `000_initial_schema.sql` supports installation on an empty database.
 
-## Import Zabbix
-
-L'import Zabbix è intenzionalmente disponibile solo da CLI:
+Run migrations with a database account that owns the MoonCreater schema:
 
 ```bash
-php bin/import_zabbix.php /percorso/zabbix_hosts.csv
+php bin/migrate.php
 ```
 
-## Backup
+Do not edit a migration after it has been published. Add a new numbered migration instead.
 
-Il pulsante di backup crea tabelle snapshot nello stesso database:
+## Satellite inventory rules
 
-- `bak_ivanti_YYYYMMDD_HHMM`
-- `bak_satellite_YYYYMMDD_HHMM`
-- `bak_notes_YYYYMMDD_HHMM`
+The current Satellite CSV represents the current source state:
 
-Non è un backup completo. Per proteggere l'intero database occorre affiancare un
-`pg_dump` conservato su un sistema esterno.
+- an `excluded` host remains excluded;
+- a present host with a check-in no older than three days becomes `active`;
+- a present host with an old, missing, or invalid check-in becomes `unhealthy`;
+- a previously known host absent from the new CSV becomes `missing`;
+- hosts assigned the `satellite` or `capsule` role are preserved by normal reconciliation.
 
-## Sicurezza
-
-- Le mutazioni web richiedono sessione admin, POST e token CSRF.
-- Le sessioni usano cookie `HttpOnly`, `SameSite=Strict` e timeout di inattività.
-- L'ID di sessione viene rigenerato dopo il login.
-- Gli utenti non amministratori hanno un'interfaccia in sola lettura.
-- Non è possibile eliminare l'ultimo amministratore.
-- Solo `public/` è esposto dal web; CSV, SQL, test, configurazione e documentazione restano fuori.
-- Le credenziali database non sono memorizzate nel codice.
-- Gli hash delle password utente non sono esportabili dal portale.
-- Errori dettagliati ed eventi di audit vengono inviati ai log del server.
-
-## Verifiche
+Administrators can import the current inventory from the dashboard. CLI usage is also available:
 
 ```bash
-setup/check.sh
+php public/import_satellite.php /path/to/satellite-inventory.csv
 ```
 
-Una richiesta non autenticata a `migration_trends.php` deve ricevere un redirect
-HTTP `302` verso `login.php`.
+Historical CSV files must be imported from the Migration Trends page. Historical imports create
+snapshots only and never alter the current operational inventory.
 
-## Documentazione operativa
+## Zabbix import
 
-Consultare `docs/INSTALL.md` per installazione e aggiornamento e `docs/ARCHITECTURE.md` per la
-struttura interna.
+The Zabbix import is intentionally CLI-only:
 
-## Licenza
+```bash
+php bin/import_zabbix.php /path/to/zabbix-hosts.csv
+```
+
+## Backups
+
+The dashboard backup action creates timestamped snapshot tables inside the same PostgreSQL
+database. These snapshots are convenient for short-term operational recovery, but they are not a
+complete backup. Use `pg_dump` and store copies on a separate system for disaster recovery.
+
+## Development and verification
+
+Run the complete preflight suite from the repository root:
+
+```bash
+./setup/check.sh
+```
+
+It validates PHP syntax, required extensions, security invariants, domain helpers, and the expected
+public web surface.
+
+See [Contributing](CONTRIBUTING.md) before submitting a change. Security issues should follow the
+[Security Policy](SECURITY.md).
+
+## License
 
 Copyright © 2026 MoonCreater contributors.
 
-MoonCreater è distribuito secondo la **GNU Affero General Public License, versione 3 o successiva**
-(`AGPL-3.0-or-later`). Le versioni modificate distribuite o rese disponibili agli utenti tramite
-rete devono rispettare gli obblighi di copyleft e disponibilità del codice sorgente previsti dalla
-licenza. Consultare il file `LICENSE` per i termini completi.
+MoonCreater is licensed under the **GNU Affero General Public License, version 3 or later**
+(`AGPL-3.0-or-later`). Modified versions distributed or made available to users over a network must
+comply with the license's copyleft and corresponding-source requirements. See [LICENSE](LICENSE) and
+[NOTICE](NOTICE) for the complete terms and notice.
