@@ -57,7 +57,7 @@ info 'Installing RHEL packages'
 dnf install -y \
     httpd php php-cli php-pgsql php-mbstring \
     postgresql postgresql-server policycoreutils-python-utils \
-    firewalld git ripgrep
+    firewalld git
 
 info 'Installing application files'
 if [[ $source_dir != "$install_dir" ]]; then

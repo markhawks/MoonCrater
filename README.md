@@ -61,7 +61,7 @@ See [Architecture](docs/ARCHITECTURE.md) for more detail.
 - Apache HTTP Server
 - PHP 8 or later with PDO PostgreSQL support
 - PostgreSQL
-- `psql` and `rg` for installation checks
+- `psql` for installation checks
 - HTTPS for production deployments
 
 No container runtime is required.
