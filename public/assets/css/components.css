@@ -1,0 +1,290 @@
+/* ============================================================
+   components.css — Componenti riutilizzabili
+   Card, bottoni, badge, form inputs, modal, utilities
+   Importato dopo base.css da tutte le pagine
+   ============================================================ */
+
+
+/* ============================================================
+   1. CARD
+   ============================================================ */
+.card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-default);
+}
+
+.card table { margin-bottom: 0; }
+
+
+/* ============================================================
+   2. BOTTONI HEADER — Versione, utente, logout
+   Pattern: sfondo traslucido viola + bordo viola
+   ============================================================ */
+.btn-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-infra-bg);
+    border: 1px solid var(--color-infra-border);
+    border-radius: var(--radius-md);
+    padding: 6px 13px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--color-infra);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+}
+.btn-header:hover {
+    background: rgba(155, 89, 182, 0.22);
+    border-color: rgba(155, 89, 182, 0.6);
+    color: #c39bd3;
+}
+.btn-header strong { color: #c39bd3; font-weight: 600; }
+.btn-header.no-hover { cursor: default; }
+.btn-header.no-hover:hover {
+    background: var(--color-infra-bg);
+    border-color: var(--color-infra-border);
+    color: var(--color-infra);
+}
+
+
+/* ============================================================
+   3. BOTTONI AZIONE — Tabelle e form
+   ============================================================ */
+
+/* Bottone primario */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-info);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition);
+    text-decoration: none;
+}
+.btn-primary:hover { background: #2980b9; }
+
+/* Bottone reset / neutro */
+.btn-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--transition);
+}
+.btn-reset:hover { background: rgba(255, 255, 255, 0.13); }
+
+/* Bottone piccolo nelle tabelle */
+.btn-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+    font-size: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.btn-small:hover { background: rgba(255, 255, 255, 0.15); }
+
+/* Bottone exclude / re-include */
+.btn-exclude {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+/* Bottone decommission (legacy) */
+.btn-decommission {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid var(--color-crit-border);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--color-crit);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-decommission:hover {
+    background: var(--color-crit);
+    color: #fff;
+    border-color: var(--color-crit);
+}
+
+/* Bottone espandi card */
+.expand-btn {
+    position: absolute;
+    top: 15px; right: 15px;
+    background: var(--color-info);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    z-index: 10001;
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.expand-btn:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.expand-btn:active { transform: translateY(0); }
+
+
+/* ============================================================
+   4. BADGE E PILL
+   ============================================================ */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: bold;
+    border: 1px solid;
+}
+
+.badge-ok     { background: var(--color-ok-bg);   color: var(--color-ok);   border-color: var(--color-ok-border); }
+.badge-warn   { background: var(--color-warn-bg);  color: var(--color-warn); border-color: var(--color-warn-border); }
+.badge-crit   { background: var(--color-crit-bg);  color: var(--color-crit); border-color: var(--color-crit-border); }
+.badge-info   { background: var(--color-info-bg);  color: var(--color-info); border-color: var(--color-info-border); }
+.badge-infra  { background: var(--color-infra-bg); color: var(--color-infra); border-color: var(--color-infra-border); }
+.badge-muted  { background: rgba(255,255,255,0.05); color: var(--text-muted); border-color: var(--border-default); }
+
+.stat-count-pill {
+    display: inline-block;
+    background: rgba(52, 73, 94, 0.6);
+    color: #ecf0f1;
+    padding: 2px 10px;
+    border-radius: 20px;
+    border: 1px solid #7f8c8d;
+    font-size: 12px;
+}
+
+/* Badge OS */
+.os-badge       { padding: 3px 8px; border-radius: var(--radius-sm); font-size: 12px; font-weight: bold; color: #fff; }
+.os-tag-10      { background: #2c3e50; }
+.os-tag-9       { background: #2980b9; }
+.os-tag-8       { background: #27ae60; }
+.os-tag-7       { background: #f39c12; }
+.os-tag-unknown { background: #95a5a6; }
+
+
+/* ============================================================
+   5. FORM INPUTS
+   ============================================================ */
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color var(--transition);
+    box-sizing: border-box;
+}
+.form-input:focus,
+.form-select:focus {
+    border-color: var(--color-infra);
+}
+
+.form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+
+/* ============================================================
+   6. UTILITIES — Testi, visibilità, spaziature
+   ============================================================ */
+.text-ok    { color: var(--color-ok)   !important; }
+.text-warn  { color: var(--color-warn) !important; }
+.text-crit  { color: var(--color-crit) !important; }
+.text-info  { color: var(--color-info) !important; }
+.text-infra { color: var(--color-infra)!important; }
+.text-muted { color: var(--text-muted) !important; }
+
+.warn-text  { color: #e67e22 !important; font-weight: bold !important; }
+td.warn-text { background: rgba(255, 244, 230, 0.08) !important; }
+
+.col-hidden { display: none !important; }
+body.no-scroll { overflow: hidden; }
+
+
+/* ============================================================
+   7. MODAL / OVERLAY
+   ============================================================ */
+.overlay-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+}
+
+.expandable-card.focused {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 900px;
+    height: 80vh;
+    z-index: 9999;
+    margin: 0;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.expandable-card.focused .table-wrapper-deep {
+    max-height: none !important;
+    flex: 1;
+    overflow-y: auto;
+}

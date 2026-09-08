@@ -1,0 +1,466 @@
+/* ============================================================
+   MOONCREATER — Infrastructure Control Plane Patching
+   style.css
+   ============================================================ */
+
+
+/* ============================================================
+   1. VARIABILI TEMA — Solo dark mode
+   ============================================================ */
+:root,
+[data-theme="dark"] {
+    --bg-body:         linear-gradient(135deg, #1e272e 0%, #2f3640 100%);
+    --card-bg:         rgba(255, 255, 255, 0.05);
+    --text-main:       #f5f6fa;
+    --text-muted:      #a4b0be;
+    --border-color:    rgba(255, 255, 255, 0.1);
+    --table-head-bg:   rgba(0, 0, 0, 0.3);
+    --table-head-text: #ffffff;
+    --input-bg:        rgba(255, 255, 255, 0.1);
+    --row-hover:       rgba(255, 255, 255, 0.05);
+
+    /* Colori semantici */
+    --color-ok:    #2ecc71;
+    --color-warn:  #f39c12;
+    --color-crit:  #e74c3c;
+    --color-info:  #3498db;
+    --color-infra: #9b59b6;
+    --color-muted: #7f8c8d;
+}
+
+
+/* ============================================================
+   2. BASE — Body, Container, Tipografia
+   ============================================================ */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-body);
+    background-attachment: fixed;
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+}
+
+body.no-scroll { overflow: hidden; }
+
+.container {
+    width: 98%;
+    margin: auto;
+    padding: 20px;
+}
+
+h1, h2 { color: var(--text-main); }
+h1 { text-align: center; }
+
+
+/* ============================================================
+   3. CARD — Contenitore generico
+   ============================================================ */
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+}
+
+.card table { margin-bottom: 0; }
+
+
+/* ============================================================
+   4. HEADER — Controlli: versione, utente, logout
+
+   Tutti i controlli usano .btn-header — stesso pattern viola
+   del badge versione per coerenza visiva.
+   ============================================================ */
+.btn-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(155, 89, 182, 0.1);
+    border: 1px solid rgba(155, 89, 182, 0.35);
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--color-infra);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+.btn-header:hover {
+    background: rgba(155, 89, 182, 0.22);
+    border-color: rgba(155, 89, 182, 0.6);
+    color: #b47ee5;
+}
+.btn-header strong { color: #d7bdf7; font-weight: 600; }
+
+
+/* ============================================================
+   5. STATISTICHE INVENTARIO
+   ============================================================ */
+.stats-container {
+    display: flex;
+    gap: 15px;
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    padding: 15px;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 180px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.stat-item.crit { background-color: #f8d7da; color: #721c24; }
+.stat-item.ok   { background-color: #d4edda; color: #155724; }
+.stat-item.info { background-color: #e2e3e5; color: #383d41; }
+.stat-item.warn { background-color: #fff3cd; color: #856404; }
+
+.count {
+    display: block;
+    font-size: 1.8em;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* Pill badge per contatori */
+.stat-count-pill {
+    background: #34495e;
+    color: #ecf0f1;
+    padding: 2px 10px;
+    border-radius: 20px;
+    border: 1px solid #7f8c8d;
+    font-size: 0.85em;
+}
+
+/* Badge versione OS nella tabella kernel */
+.os-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: white;
+}
+.os-tag-10      { background-color: #2c3e50; }
+.os-tag-9       { background-color: #2980b9; }
+.os-tag-8       { background-color: #27ae60; }
+.os-tag-7       { background-color: #f39c12; }
+.os-tag-unknown { background-color: #95a5a6; }
+
+
+/* ============================================================
+   6. TABELLE — Inventory tables
+   ============================================================ */
+.table-wrapper { overflow-x: auto; border-radius: 8px; }
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: transparent;
+}
+
+.table th {
+    background: var(--table-head-bg);
+    color: var(--table-head-text);
+    padding: 12px 10px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.table th[onclick]:hover {
+    background-color: rgba(52, 152, 219, 0.15);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    color: var(--text-main);
+}
+
+.table tr:hover { background: var(--row-hover); }
+
+/* Cella kernel — font monospace */
+td.kernel-cell {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.2;
+    color: inherit;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Scrollbar personalizzata */
+.card div[style*="overflow-y: auto"]::-webkit-scrollbar { width: 6px; }
+.card div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+
+/* ============================================================
+   7. RIGHE SPECIALI — Excluded, Decommissioned, Missing
+   ============================================================ */
+
+/* Host esclusi dai conteggi */
+tr.excluded-row {
+    opacity: 0.45;
+    filter: grayscale(60%);
+    transition: opacity 0.2s;
+}
+tr.excluded-row td    { color: #7f8c8d !important; }
+tr.excluded-row:hover { opacity: 0.65; }
+
+/* Riga missing in Satellite */
+tr.missing { background-color: rgba(255, 245, 245, 0.05); }
+td.crit    { color: #ff7675; font-weight: bold; }
+
+/* Riga decommissioned (legacy) */
+tr.decommissioned-row {
+    background-color: rgba(192, 57, 43, 0.15) !important;
+    border-left: 4px solid #c0392b !important;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+}
+tr.decommissioned-row td { color: #95a5a6 !important; }
+tr.decommissioned-row td strong,
+tr.decommissioned-row td span { color: #e6b0aa !important; }
+tr.decommissioned { opacity: 0.3; filter: grayscale(1); }
+
+
+/* ============================================================
+   8. CELLE NOTE — Patching notes & migration date
+   ============================================================ */
+.note-cell-style {
+    background-color: rgba(252, 248, 227, 0.08) !important;
+    min-width: 200px;
+    transition: background-color 0.3s ease;
+}
+
+.note-cell-style.note-populated,
+.note-populated {
+    background-color: rgba(46, 204, 113, 0.2) !important;
+    transition: background-color 0.3s ease;
+}
+
+
+/* ============================================================
+   9. FILTRI — Search & filter form
+   ============================================================ */
+.filters { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.filter-group { display: flex; align-items: center; gap: 10px; }
+.filters label { font-weight: bold; font-size: 0.9em; color: var(--text-main); }
+
+.filters input,
+.filters select {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-main);
+    outline: none;
+}
+
+.filters button {
+    background: var(--color-info);
+    color: white;
+    border: none;
+    padding: 9px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+
+/* ============================================================
+   10. BOTTONI AZIONE — Piccoli bottoni nelle tabelle
+   ============================================================ */
+.btn-small {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 3px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.15s;
+}
+
+/* Bottone exclude / re-include */
+.btn-exclude {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* Bottone decommission (legacy) */
+.btn-decommission {
+    background: transparent;
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    color: var(--color-crit);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-decommission:hover {
+    background: var(--color-crit);
+    color: #fff;
+    border-color: var(--color-crit);
+}
+
+/* Reset filtri */
+.btn-reset {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-muted);
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-reset:hover { background: rgba(255, 255, 255, 0.13); }
+
+
+/* ============================================================
+   11. TOGGLE COLONNE — Show/hide column toolbar
+   ============================================================ */
+.column-toggle-container {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.column-toggle-label {
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #85929e;
+}
+
+.toggle-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85em;
+    color: #d5dbdb;
+    cursor: pointer;
+    user-select: none;
+}
+.toggle-checkbox-label input { cursor: pointer; }
+
+/* Nasconde colonne programmaticamente */
+.col-hidden { display: none !important; }
+
+
+/* ============================================================
+   12. UTILITIES — Colori semantici, warning
+   ============================================================ */
+.warn-text {
+    color: #e67e22 !important;
+    font-weight: bold !important;
+}
+td.warn-text {
+    background-color: rgba(255, 244, 230, 0.08) !important;
+}
+
+.crit {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #c0392b;
+    font-weight: bold;
+}
+
+
+/* ============================================================
+   13. MODAL / OVERLAY — Changelog, card focus
+   ============================================================ */
+
+/* Overlay generico */
+.overlay-mask {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+}
+
+/* Card in modalità focus espanso */
+.expandable-card.focused {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 900px;
+    height: 80vh;
+    z-index: 9999;
+    margin: 0;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.expandable-card.focused .table-wrapper-deep {
+    max-height: none !important;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Bottone espandi card */
+.expand-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    cursor: pointer;
+    background-color: var(--color-info);
+    color: #ffffff !important;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 10001;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.expand-btn:hover {
+    background-color: #2980b9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+.expand-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}

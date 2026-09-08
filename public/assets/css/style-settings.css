@@ -1,0 +1,380 @@
+/* ============================================================
+   style-settings.css — Stili esclusivi della pagina settings
+   Dipende da: base.css, components.css
+   ============================================================ */
+
+
+/* ============================================================
+   1. LAYOUT — Container e header pagina
+   ============================================================ */
+.settings-container {
+    width: 96%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.settings-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.settings-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 2px 0 0 0;
+}
+
+
+/* ============================================================
+   2. SEZIONI — Card con titolo sezione
+   ============================================================ */
+.settings-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.settings-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.settings-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.settings-section-body {
+    padding: 22px;
+}
+
+.customer-logo-settings { display:flex; align-items:center; gap:22px; }
+.customer-logo-preview { width:72px; height:72px; display:flex; align-items:center; justify-content:center; flex:0 0 72px; background:rgba(0,0,0,.15); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); overflow:hidden; }
+.customer-logo-preview img { width:48px; height:48px; object-fit:contain; }
+.customer-logo-controls { display:flex; flex-direction:column; gap:9px; flex:1; }
+.customer-logo-help { font-size:12px; color:var(--text-muted); }
+.customer-logo-actions, .customer-logo-upload-form { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.customer-logo-upload-form input[type=file] { max-width:300px; color:var(--text-muted); font-size:12px; }
+@media (max-width:700px) { .customer-logo-settings { align-items:flex-start; flex-direction:column; } }
+
+
+/* ============================================================
+   3. TABELLA UTENTI
+   ============================================================ */
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.users-table th {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.users-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.users-table tr:last-child td { border-bottom: none; }
+
+.users-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Badge ruolo */
+.role-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.role-admin {
+    background: var(--color-infra-bg);
+    border: 1px solid var(--color-infra-border);
+    color: var(--color-infra);
+}
+
+.role-user {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-default);
+    color: var(--text-muted);
+}
+
+/* Data creazione */
+.user-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Riga utente corrente */
+.users-table tr.current-user td {
+    background: rgba(155, 89, 182, 0.05);
+}
+
+
+/* ============================================================
+   4. FORM AGGIUNGI UTENTE
+   ============================================================ */
+.add-user-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 160px 120px;
+    gap: 12px;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.form-group input,
+.form-group select {
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color var(--transition), background var(--transition);
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--color-infra);
+    background: rgba(155, 89, 182, 0.06);
+}
+
+.form-group select option { background: #2f3640; }
+
+.btn-add-user {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: var(--color-infra-bg);
+    border: 1px solid var(--color-infra-border);
+    border-radius: var(--radius-md);
+    color: var(--color-infra);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+    white-space: nowrap;
+}
+.btn-add-user:hover {
+    background: rgba(155, 89, 182, 0.22);
+    border-color: rgba(155, 89, 182, 0.6);
+}
+
+
+/* ============================================================
+   5. AZIONI RIGA — Reset password, rimuovi
+   ============================================================ */
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all var(--transition);
+    white-space: nowrap;
+    background: transparent;
+}
+
+.btn-action-reset {
+    color: var(--color-info);
+    border-color: rgba(52, 152, 219, 0.35);
+}
+.btn-action-reset:hover {
+    background: var(--color-info-bg);
+    border-color: var(--color-info-border);
+}
+
+.btn-action-delete {
+    color: var(--color-crit);
+    border-color: var(--color-crit-border);
+}
+.btn-action-delete:hover {
+    background: var(--color-crit-bg);
+    border-color: rgba(231, 76, 60, 0.5);
+}
+
+
+/* ============================================================
+   6. EXPORT SQL
+   ============================================================ */
+.export-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.export-description {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 600px;
+}
+
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: rgba(46, 204, 113, 0.1);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--color-ok);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--transition), border-color var(--transition);
+    white-space: nowrap;
+}
+.btn-export:hover {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: rgba(46, 204, 113, 0.5);
+}
+
+
+/* ============================================================
+   7. MESSAGGI — Successo ed errore
+   ============================================================ */
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    margin-bottom: 20px;
+    border: 1px solid;
+}
+
+.alert-ok {
+    background: var(--color-ok-bg);
+    border-color: var(--color-ok-border);
+    color: var(--color-ok);
+}
+
+.alert-error {
+    background: var(--color-crit-bg);
+    border-color: var(--color-crit-border);
+    color: #ff7675;
+}
+
+
+/* ============================================================
+   8. MODAL RESET PASSWORD
+   ============================================================ */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-backdrop.active { display: flex; }
+
+.modal-box {
+    background: #1e272e;
+    border: 1px solid var(--color-infra-border);
+    border-radius: var(--radius-xl);
+    padding: 28px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.modal-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}

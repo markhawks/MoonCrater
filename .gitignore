@@ -1,0 +1,11 @@
+.env
+*.log
+var/*
+!var/.gitkeep
+csv/*.csv
+satellite-import-csv/*.csv
+zabbix-import-csv/*.csv
+.idea/
+.vscode/
+.DS_Store
+SESSION_HANDOFF.md

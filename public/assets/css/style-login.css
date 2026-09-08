@@ -1,0 +1,259 @@
+/* ============================================================
+   style-login.css — Stili esclusivi della pagina di login
+   Dipende da: base.css, components.css
+   ============================================================ */
+
+
+/* ============================================================
+   1. LAYOUT — Struttura a due colonne
+   ============================================================ */
+
+/* Wrapper esterno: centra verticalmente e orizzontalmente */
+.login-wrapper {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    box-sizing: border-box;
+}
+
+/* Contenitore interno: max 800px, due colonne */
+.login-box {
+    display: flex;
+    width: 100%;
+    max-width: 800px;
+    min-height: 520px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-default);
+}
+
+/* Colonna sinistra: branding */
+.login-brand {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 44px 40px;
+    background: rgba(0, 0, 0, 0.2);
+    border-right: 1px solid var(--border-subtle);
+    gap: 0;
+    box-sizing: border-box;
+}
+
+/* Colonna destra: form */
+.login-form-col {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 44px 36px;
+    background: rgba(255, 255, 255, 0.02);
+    box-sizing: border-box;
+}
+
+/* Responsive: sotto 640px collassa in colonna */
+@media (max-width: 640px) {
+    .login-box       { flex-direction: column; max-width: 100%; }
+    .login-brand     { border-right: none; border-bottom: 1px solid var(--border-subtle); padding: 32px 28px; }
+    .login-form-col  { width: 100%; padding: 32px 28px; }
+}
+
+
+/* ============================================================
+   2. BRAND — Logo, nome prodotto, descrizione
+   ============================================================ */
+.brand-product-logo {
+    height: 184px;
+    width: auto;
+    max-width: 440px;
+    object-fit: contain;
+    margin-bottom: 22px;
+}
+
+.brand-product-name {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.brand-product-version {
+    width: fit-content;
+    margin-bottom: 9px;
+    padding: 2px 8px;
+    border: 1px solid rgba(155, 89, 182, 0.35);
+    border-radius: var(--radius-sm);
+    background: rgba(155, 89, 182, 0.1);
+    color: var(--color-infra);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.brand-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 36px;
+    line-height: 1.5;
+}
+
+.brand-divider {
+    width: 48px;
+    height: 2px;
+    background: var(--color-infra);
+    border-radius: 2px;
+    margin-bottom: 36px;
+    opacity: 0.6;
+}
+
+.brand-description {
+    font-size: 13px;
+    color: var(--text-faint);
+    line-height: 1.7;
+    max-width: 380px;
+    margin-bottom: 48px;
+}
+
+.brand-client {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-top: auto;
+}
+
+.brand-client-logo {
+    height: 24px;
+    width: auto;
+    opacity: 0.85;
+}
+
+.brand-client-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.brand-client-name {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   3. FORM — Card di login
+   ============================================================ */
+.login-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: 36px 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.login-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.login-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 16px;
+}
+
+.login-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+}
+
+.login-field input {
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: border-color var(--transition), background var(--transition);
+    box-sizing: border-box;
+    width: 100%;
+}
+.login-field input:focus {
+    border-color: var(--color-infra);
+    background: rgba(155, 89, 182, 0.06);
+}
+.login-field input::placeholder { color: var(--text-faint); }
+
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    background: var(--color-infra-bg);
+    border: 1px solid var(--color-infra-border);
+    border-radius: var(--radius-md);
+    color: var(--color-infra);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+.login-btn:hover {
+    background: rgba(155, 89, 182, 0.25);
+    border-color: rgba(155, 89, 182, 0.65);
+    color: #c39bd3;
+}
+.login-btn:active {
+    background: rgba(155, 89, 182, 0.35);
+}
+
+
+/* ============================================================
+   4. ERRORE e FOOTER
+   ============================================================ */
+.login-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-crit-bg);
+    border: 1px solid var(--color-crit-border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #ff7675;
+}
+
+.login-footer {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.6;
+}

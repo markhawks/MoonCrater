@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title">
+  <title id="title">Default customer</title>
+  <rect width="96" height="96" rx="24" fill="#243442"/>
+  <circle cx="48" cy="48" r="31" fill="none" stroke="#8b9bab" stroke-width="3"/>
+  <path d="M29 67 43 30h10l14 37H56l-3-9H42l-3 9H29Zm16-18h6l-3-10-3 10Z" fill="#dbe4ec"/>
+</svg>

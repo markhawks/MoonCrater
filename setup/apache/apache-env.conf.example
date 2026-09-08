@@ -1,0 +1,10 @@
+SetEnv DB_HOST localhost
+SetEnv DB_PORT 5432
+SetEnv DB_NAME mooncreater
+SetEnv DB_USER mooncreater
+SetEnv DB_PASS replace_me
+SetEnv APP_TIMEZONE Europe/Rome
+SetEnv APP_NAME MoonCreater
+SetEnv APP_SUBTITLE Infrastructure Control Plane Patching
+SetEnv CUSTOMER_NAME Acme Corporation
+SetEnv CUSTOMER_LOGO assets/img/customer-default.svg

@@ -1,0 +1,117 @@
+/* ============================================================
+   base.css — Variabili globali, reset, body, tipografia
+   Importato da tutte le pagine come primo foglio di stile
+   ============================================================ */
+
+
+/* ============================================================
+   1. VARIABILI GLOBALI — Colori, spaziature, font
+   ============================================================ */
+:root {
+    /* Sfondo */
+    --bg-body:         linear-gradient(135deg, #1e272e 0%, #2f3640 100%);
+    --bg-card:         rgba(255, 255, 255, 0.05);
+    --bg-input:        rgba(255, 255, 255, 0.08);
+    --bg-hover:        rgba(255, 255, 255, 0.05);
+
+    /* Testo */
+    --text-primary:    #f5f6fa;
+    --text-secondary:  #a4b0be;
+    --text-muted:      #7f8c8d;
+    --text-faint:      #566573;
+
+    /* Bordi */
+    --border-default:  rgba(255, 255, 255, 0.1);
+    --border-subtle:   rgba(255, 255, 255, 0.06);
+    --border-strong:   rgba(255, 255, 255, 0.18);
+
+    /* Colori semantici */
+    --color-ok:        #2ecc71;
+    --color-ok-bg:     rgba(46, 204, 113, 0.12);
+    --color-ok-border: rgba(46, 204, 113, 0.3);
+
+    --color-warn:      #f39c12;
+    --color-warn-bg:   rgba(243, 156, 18, 0.12);
+    --color-warn-border: rgba(243, 156, 18, 0.3);
+
+    --color-crit:      #e74c3c;
+    --color-crit-bg:   rgba(231, 76, 60, 0.12);
+    --color-crit-border: rgba(231, 76, 60, 0.3);
+
+    --color-info:      #3498db;
+    --color-info-bg:   rgba(52, 152, 219, 0.12);
+    --color-info-border: rgba(52, 152, 219, 0.3);
+
+    --color-infra:     #9b59b6;
+    --color-infra-bg:  rgba(155, 89, 182, 0.12);
+    --color-infra-border: rgba(155, 89, 182, 0.35);
+
+    /* Tabelle */
+    --table-head-bg:   rgba(0, 0, 0, 0.3);
+    --table-head-text: #ffffff;
+
+    /* Tipografia */
+    --font-main:       'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-mono:       'Courier New', Courier, monospace;
+
+    /* Spacing */
+    --radius-sm:   4px;
+    --radius-md:   6px;
+    --radius-lg:   10px;
+    --radius-xl:   12px;
+
+    /* Transizioni */
+    --transition:  0.2s ease;
+}
+
+
+/* ============================================================
+   2. RESET — Normalizzazione cross-browser
+   ============================================================ */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-main);
+    background: var(--bg-body);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+body.no-scroll { overflow: hidden; }
+
+img, svg { display: block; max-width: 100%; }
+
+a { color: inherit; }
+
+button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+
+/* ============================================================
+   3. TIPOGRAFIA — Headings e testo
+   ============================================================ */
+h1, h2, h3, h4 {
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+h4 { font-size: 13px; font-weight: 600; }
+
+p  { margin: 0 0 10px 0; color: var(--text-secondary); }
+
+small { font-size: 11px; color: var(--text-muted); }
