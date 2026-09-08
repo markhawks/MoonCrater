@@ -19,6 +19,10 @@ restrictive. Enable HTTPS before exposing the service beyond a trusted network.
 
 ## Upgrade
 
+On RHEL 10 installations created with the dedicated installer, update the Git clone and run
+`sudo ./setup/rhel10/update.sh`. The updater creates a PostgreSQL backup and preserves credentials,
+users and runtime data. See `setup/rhel10/README.md` for details.
+
 Back up PostgreSQL, replace the application files while preserving local configuration, run
 `php bin/migrate.php`, execute `setup/check.sh`, then reload Apache. Roll back application files
 and restore the database backup together if a schema migration cannot be reversed safely.

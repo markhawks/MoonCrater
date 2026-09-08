@@ -98,6 +98,14 @@ sudo systemctl reload httpd
 
 For the complete procedure, see [Installation](docs/INSTALL.md).
 
+On a RHEL 10 host installed with the dedicated installer, update from the original Git clone. The
+updater backs up PostgreSQL and preserves users, application data and credentials:
+
+```bash
+git pull --ff-only origin main
+sudo ./setup/rhel10/update.sh
+```
+
 ## Configuration
 
 Required environment variables:

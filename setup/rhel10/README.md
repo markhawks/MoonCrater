@@ -38,3 +38,31 @@ For automation, passwords may be supplied as `MOONCREATER_DB_PASSWORD` and
 `MOONCREATER_ADMIN_PASSWORD`. Avoid shell history and use a protected environment file or a secret
 manager. HTTPS is deliberately not configured because its setup depends on the site's DNS name and
 certificate source.
+
+## Updating an existing installation
+
+Pull the desired release into the original Git clone, then run the dedicated updater:
+
+```bash
+git pull --ff-only origin main
+sudo ./setup/rhel10/update.sh
+```
+
+The updater reads the existing database credentials from `/etc/mooncreater/apache-env.conf`; it
+does not change them and does not recreate the administrator. Before applying migrations it creates
+a custom-format `pg_dump` backup under `/opt/mooncreater/var/backups`. It stages and checks the new
+release before replacing the application directory, reloads Apache and performs an HTTP check.
+
+Application files are automatically restored if activation or the HTTP check fails. Database
+migrations are not automatically reversed: use the reported PostgreSQL backup for a coordinated
+database restore if a migration itself must be rolled back.
+
+Optional update variables:
+
+| Variable | Default |
+|---|---|
+| `MOONCREATER_INSTALL_DIR` | `/opt/mooncreater` |
+| `MOONCREATER_ENV_FILE` | `/etc/mooncreater/apache-env.conf` |
+| `MOONCREATER_BACKUP_DIR` | `/opt/mooncreater/var/backups` |
+| `MOONCREATER_HEALTH_URL` | `http://127.0.0.1/` |
+| `MOONCREATER_ALLOW_DIRTY_SOURCE` | `no` |
