@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+require_once __DIR__ . '/../app/Domain/inventory.php';
 $current_user = require_login($pdo);
 $is_admin = (($current_user["role"] ?? "user") === "admin");
 
@@ -279,7 +280,7 @@ $migration_pct = $total_zabbix > 0
                     $checkin_val   = $host['last_checkin'] ?? '';
                     if (!$is_missing_sat && !empty($checkin_val) && $checkin_val !== 'N/A') {
                         $lc_obj = DateTime::createFromFormat('Y-m-d', substr($checkin_val, 0, 10));
-                        if ($lc_obj && $lc_obj < (new DateTime())->modify('-3 days')) {
+                        if ($lc_obj && $lc_obj < (new DateTime())->modify('-' . SATELLITE_CHECKIN_MAX_AGE_DAYS . ' days')) {
                             $checkin_style = 'color:#e74c3c; font-weight:bold;';
                         }
                     }

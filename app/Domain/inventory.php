@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+const SATELLITE_CHECKIN_MAX_AGE_DAYS = 30;
+
 function detect_os_major(?string $osString): string
 {
     $os = strtolower($osString ?? '');
@@ -36,7 +38,7 @@ function normalize_satellite_status(?string $status, bool $columnPresent): strin
 function satellite_status_from_checkin(
     ?string $lastCheckin,
     ?DateTimeImmutable $now = null,
-    int $maxAgeDays = 3
+    int $maxAgeDays = SATELLITE_CHECKIN_MAX_AGE_DAYS
 ): string {
     $value = trim($lastCheckin ?? '');
     if ($value === '' || in_array(strtoupper($value), ['N/A', 'N/D', 'NULL'], true)) return 'unhealthy';

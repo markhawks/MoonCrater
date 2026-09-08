@@ -236,8 +236,8 @@ try {
 
 
 
-// Calcoliamo la data limite di 3 giorni fa nel formato corretto per Postgres
-$three_days_ago = date('Y-m-d H:i:s', strtotime('-3 days'));
+// Soglia operativa centralizzata per il last check-in Satellite.
+$satellite_checkin_limit = date('Y-m-d H:i:s', strtotime('-' . SATELLITE_CHECKIN_MAX_AGE_DAYS . ' days'));
 
 $outdated_satellite_count = 0;
 $total_satellite_count = 0;
@@ -263,7 +263,7 @@ try {
                 )
           )
     ");
-    $stmt_out->execute([':limit_date' => $three_days_ago]);
+    $stmt_out->execute([':limit_date' => $satellite_checkin_limit]);
     $outdated_satellite_count = $stmt_out->fetchColumn();
 
     // Totale host censiti su Satellite (esclude fantasmi)
@@ -341,7 +341,7 @@ try {
     $infra_stats = [];
 }
 // Calcolati sul loop merged_rows (stessa logica dei filtri PHP)
-$three_days_ago_obj = (new DateTime())->modify('-3 days');
+$satellite_checkin_limit_obj = (new DateTime())->modify('-' . SATELLITE_CHECKIN_MAX_AGE_DAYS . ' days');
 
 $unified_healthy   = 0;
 $unified_unhealthy = 0;
@@ -367,7 +367,7 @@ foreach ($merged_rows as $m) {
     $lc = $sat['last_checkin'] ?? '';
     if (!empty($lc) && $lc !== 'N/A' && $lc !== 'N/D') {
         $lc_obj = DateTime::createFromFormat('Y-m-d', substr($lc, 0, 10));
-        if ($lc_obj && $lc_obj >= $three_days_ago_obj) {
+        if ($lc_obj && $lc_obj >= $satellite_checkin_limit_obj) {
             $unified_healthy++;
         } else {
             $unified_unhealthy++;
@@ -395,7 +395,7 @@ foreach ($sat_lookup as $norm_name => $sat_data) {
     $lc = $sat_data['last_checkin'] ?? '';
     if (!empty($lc) && $lc !== 'N/A' && $lc !== 'N/D') {
         $lc_obj = DateTime::createFromFormat('Y-m-d', substr($lc, 0, 10));
-        if ($lc_obj && $lc_obj >= $three_days_ago_obj) {
+        if ($lc_obj && $lc_obj >= $satellite_checkin_limit_obj) {
             $satonly_healthy++;
         } else {
             $satonly_unhealthy++;
@@ -448,6 +448,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.34' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Estesa da 3 a 30 giorni la soglia di validita del last check-in Satellite',
+                'Allineati import corrente, storico, dashboard, filtri e pagine statistiche alla nuova soglia',
+                'Centralizzata la soglia Satellite per evitare differenze tra le diverse viste',
+            ],
+        ],
         '1.33' => [
             'date' => '2026-09-08',
             'changes' => [
@@ -950,7 +958,7 @@ if (file_exists('import_satellite.php')) {
             <div style="flex: 1;">
                 <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 3px;">Unhealthy hosts</div>
                 <div style="font-size: 28px; font-weight: 600; color: #e74c3c; line-height: 1;"><?= $total_unhealthy ?></div>
-                <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">check-in &gt;3d, N/D or missing</div>
+                <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">check-in &gt;<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d, N/D or missing</div>
             </div>
             <div style="width: 1px; background: rgba(255,255,255,0.08); align-self: stretch;"></div>
             <div style="flex: 1;">
@@ -1055,8 +1063,8 @@ if (file_exists('import_satellite.php')) {
                         <option value="all"       <?= $filter_missing == 'all'       ? 'selected' : '' ?>>All Systems</option>
                         <option value="missing"   <?= $filter_missing == 'missing'   ? 'selected' : '' ?>>Missing on Satellite</option>
                         <option value="matched"   <?= $filter_missing == 'matched'   ? 'selected' : '' ?>>Present on Satellite</option>
-                        <option value="unhealthy" <?= $filter_missing == 'unhealthy' ? 'selected' : '' ?>>⏳ Unhealthy Check-in (>3d / N/A)</option>
-                        <option value="healthy"   <?= $filter_missing == 'healthy'   ? 'selected' : '' ?>>✅ Healthy Check-in (<=3d)</option>
+                        <option value="unhealthy" <?= $filter_missing == 'unhealthy' ? 'selected' : '' ?>>⏳ Unhealthy Check-in (&gt;<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d / N/A)</option>
+                        <option value="healthy"   <?= $filter_missing == 'healthy'   ? 'selected' : '' ?>>✅ Healthy Check-in (&lt;=<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d)</option>
                     </select>
                 </div>
 
@@ -1248,7 +1256,7 @@ if (file_exists('import_satellite.php')) {
                 } elseif (!empty($sat['last_checkin']) && $sat['last_checkin'] !== 'N/A') {
                     $checkin_date_part = substr($sat['last_checkin'], 0, 10);
                     $checkin_obj = DateTime::createFromFormat('Y-m-d', $checkin_date_part);
-                    if ($checkin_obj && $checkin_obj < (new DateTime())->modify('-3 days')) {
+                    if ($checkin_obj && $checkin_obj < $satellite_checkin_limit_obj) {
                         $is_stale_checkin = true; // Presente in Satellite ma check-in scaduto
                     }
                 } else {
@@ -1313,7 +1321,7 @@ if (file_exists('import_satellite.php')) {
                     $checkin_obj = DateTime::createFromFormat('Y-m-d', $checkin_date_part);
 
                     // Segnalazione se l'ultimo check-in Satellite è più vecchio di 30 giorni
-                    if ($checkin_obj && $checkin_obj < (new DateTime())->modify('-3 days')) {
+                    if ($checkin_obj && $checkin_obj < $satellite_checkin_limit_obj) {
                         $checkin_class = 'warn-text';
                     }
                 } elseif ($sat) {
@@ -1467,7 +1475,7 @@ if (file_exists('import_satellite.php')) {
                     if (!empty($s_checkin_raw) && $s_checkin_raw !== 'N/A' && $s_checkin_raw !== 'N/D') {
                         $s_checkin_display = $s_checkin_raw;
                         $s_checkin_obj = DateTime::createFromFormat('Y-m-d', substr($s_checkin_raw, 0, 10));
-                        if ($s_checkin_obj && $s_checkin_obj < (new DateTime())->modify('-3 days')) {
+                        if ($s_checkin_obj && $s_checkin_obj < $satellite_checkin_limit_obj) {
                             $s_stale_checkin = true;
                         }
                     } else {

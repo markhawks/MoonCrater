@@ -24,7 +24,7 @@ MoonCreater provides a unified operational view of Linux patching inventories. I
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.33**.
+Current application version: **1.34**.
 
 ## Features
 
@@ -148,7 +148,7 @@ Do not edit a migration after it has been published. Add a new numbered migratio
 The current Satellite CSV represents the current source state:
 
 - an `excluded` host remains excluded;
-- a present host with a check-in no older than three days becomes `active`;
+- a present host with a check-in no older than 30 days becomes `active`;
 - a present host with an old, missing, or invalid check-in becomes `unhealthy`;
 - a previously known host absent from the new CSV becomes `missing`;
 - hosts assigned the `satellite` or `capsule` role are preserved by normal reconciliation.

@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+require_once __DIR__ . '/../app/Domain/inventory.php';
 $current_user = require_login($pdo);
 
 // 2. Data Extraction & Sorting (RHEL 10)
@@ -51,16 +52,16 @@ foreach ($satellite_hosts as $host) {
 }
 uksort($minor_distribution, 'strnatcasecmp');
 
-// 4. Last check-in analysis (>3 days = stale)
+// 4. Last check-in analysis (centralized Satellite threshold)
 $stale_checkin_count = 0;
-$thirty_days_ago     = (new DateTime())->modify('-3 days');
+$checkin_limit       = (new DateTime())->modify('-' . SATELLITE_CHECKIN_MAX_AGE_DAYS . ' days');
 foreach ($satellite_hosts as $host) {
     $lc = trim($host['last_checkin'] ?? '');
     if (empty($lc) || $lc === 'N/A' || $lc === 'N/D') {
         $stale_checkin_count++;
     } else {
         $lc_obj = DateTime::createFromFormat('Y-m-d', substr($lc, 0, 10));
-        if ($lc_obj && $lc_obj < $thirty_days_ago) {
+        if ($lc_obj && $lc_obj < $checkin_limit) {
             $stale_checkin_count++;
         }
     }
@@ -142,13 +143,13 @@ foreach ($satellite_hosts as $host) {
         <div class="card" style="border-left: 4px solid #f39c12;">
             <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">⏳ Stale Check-in</h3>
             <div style="font-size: 2.2em; font-weight: 800; color: #f39c12; margin-top: 10px;"><?= $stale_checkin_count ?></div>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with last check-in older than 3 days or N/D.</p>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with last check-in older than <?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?> days or N/D.</p>
         </div>
 
         <div class="card" style="border-left: 4px solid #2ecc71;">
             <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">✅ Healthy Hosts</h3>
             <div style="font-size: 2.2em; font-weight: 800; color: #2ecc71; margin-top: 10px;"><?= $total_rhel10 - $stale_checkin_count ?></div>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with recent check-in within the last 3 days.</p>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with recent check-in within the last <?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?> days.</p>
         </div>
 
         <div class="card" style="border-left: 4px solid #9b59b6;">

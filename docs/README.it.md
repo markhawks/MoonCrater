@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.33**.
+Versione applicativa corrente: **1.34**.
 
 Asset branding:
 
@@ -108,7 +108,7 @@ Se il percorso non è specificato, viene usato il CSV corrente nella directory
 Regole applicate:
 
 - un host `excluded` resta escluso;
-- un host presente con check-in entro 3 giorni diventa `active`;
+- un host presente con check-in entro 30 giorni diventa `active`;
 - un host presente con check-in vecchio, assente o non valido diventa `unhealthy`;
 - un host assente dal nuovo CSV diventa `missing`;
 - i ruoli `satellite` e `capsule` non vengono modificati.
@@ -122,7 +122,7 @@ La pagina `migration_trends.php` consente agli amministratori di caricare vecchi
 CSV indicando la data dello snapshot. Questo import non modifica l'inventario
 operativo, gli stati, i check-in o le esclusioni correnti.
 
-Sono considerati attivi soltanto gli host con check-in entro 3 giorni dalla data
+Sono considerati attivi soltanto gli host con check-in entro 30 giorni dalla data
 selezionata, usando le ore 23:59:59 come riferimento.
 
 La pagina mostra:

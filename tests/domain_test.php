@@ -23,4 +23,7 @@ if (normalize_satellite_status('ACTIVE', true) !== 'active') exit(1);
 if (normalize_satellite_status('enabled', true) !== 'active') exit(1);
 if (normalize_satellite_status('inactive', true) !== 'missing') exit(1);
 if (normalize_satellite_status('', true) !== 'missing') exit(1);
+$reference = new DateTimeImmutable('2026-09-08 12:00:00 UTC');
+if (satellite_status_from_checkin('2026-08-10 12:00:00 UTC', $reference) !== 'active') exit(1);
+if (satellite_status_from_checkin('2026-08-08 11:59:59 UTC', $reference) !== 'unhealthy') exit(1);
 echo "Domain helper tests passed.\n";

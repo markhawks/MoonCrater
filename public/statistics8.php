@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+require_once __DIR__ . '/../app/Domain/inventory.php';
 $current_user = require_login($pdo);
 
 // 2. Data Extraction & Protected Numerical Sorting (Handles 8.10 > 8.9 and ignores corrupted text)
@@ -186,7 +187,7 @@ uksort($minor_distribution, 'strnatcasecmp');
                                 if (!empty($sat['last_checkin']) && $sat['last_checkin'] !== 'N/A') {
                                     $checkin_date_part = substr($sat['last_checkin'], 0, 10);
                                     $checkin_obj = DateTime::createFromFormat('Y-m-d', $checkin_date_part);
-                                    if ($checkin_obj && $checkin_obj < (new DateTime())->modify('-3 days')) {
+                                    if ($checkin_obj && $checkin_obj < (new DateTime())->modify('-' . SATELLITE_CHECKIN_MAX_AGE_DAYS . ' days')) {
                                         $checkin_class = 'color: #e67e22; font-weight: bold;';
                                     }
                                 }
