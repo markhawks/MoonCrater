@@ -1,5 +1,9 @@
 # Installation on Apache and PostgreSQL
 
+For a dedicated Red Hat Enterprise Linux 10 server, use the complete installer documented in
+[`setup/rhel10/README.md`](../setup/rhel10/README.md). It installs and enables the required services
+in addition to deploying MoonCreater.
+
 1. Install Apache, PHP with `pdo_pgsql`, PostgreSQL, `psql` and ripgrep.
 2. Place the repository in `/opt/mooncreater` or run `sudo setup/install.sh`.
 3. Create a PostgreSQL database and a dedicated owner account.
