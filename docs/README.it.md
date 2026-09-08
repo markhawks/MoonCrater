@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.31**.
+Versione applicativa corrente: **1.32**.
 
 Asset branding:
 

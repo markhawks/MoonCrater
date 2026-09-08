@@ -132,7 +132,12 @@ try {
         VALUES (?, ?, ?, ?, ?)
         RETURNING id
     ");
-    $runStmt->execute([$sourceFilename, $importCount, $skippedCount, $missingCount, $statusColumn !== null]);
+    $runStmt->bindValue(1, $sourceFilename, PDO::PARAM_STR);
+    $runStmt->bindValue(2, $importCount, PDO::PARAM_INT);
+    $runStmt->bindValue(3, $skippedCount, PDO::PARAM_INT);
+    $runStmt->bindValue(4, $missingCount, PDO::PARAM_INT);
+    $runStmt->bindValue(5, $statusColumn !== null, PDO::PARAM_BOOL);
+    $runStmt->execute();
     $runId = (int)$runStmt->fetchColumn();
     $snapshotCounts = [];
     foreach ($snapshotHosts as $version) {

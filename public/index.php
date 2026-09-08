@@ -448,6 +448,15 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.32' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Aggiunto installer completo dedicato a Red Hat Enterprise Linux 10',
+                'Aggiunto aggiornamento sicuro con backup PostgreSQL, staging, controlli e rollback dei file',
+                'Rimossa la dipendenza da ripgrep per compatibilita con i repository standard RHEL 10',
+                'Corretto import Satellite senza colonna status con binding booleano PostgreSQL esplicito',
+            ],
+        ],
         '1.31' => [
             'date' => '2026-09-08',
             'changes' => [

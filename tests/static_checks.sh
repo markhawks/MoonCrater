@@ -22,5 +22,6 @@ done
 
 grep -q "PHP_SAPI !== 'cli'" bin/import_zabbix.php
 grep -q "session_regenerate_id" public/login.php
+grep -q "PDO::PARAM_BOOL" public/import_satellite.php
 test "$(find public -maxdepth 1 -type f ! -name '*.php' ! -name '.htaccess' | wc -l)" -eq 0
 echo "Static security checks passed."

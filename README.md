@@ -24,7 +24,7 @@ MoonCreater provides a unified operational view of Linux patching inventories. I
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.31**.
+Current application version: **1.32**.
 
 ## Features
 
