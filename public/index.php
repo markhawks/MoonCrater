@@ -448,6 +448,16 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.38' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Creazione automatica dell account di sistema mooncrater-import durante installazione e aggiornamento RHEL 10',
+                'Creazione automatica della home, della directory SSH protetta e della inbox Satellite con proprietario e permessi corretti',
+                'Aggiunte indicazioni finali per installare l exporter sul Satellite e autorizzare la chiave pubblica generata',
+                'Documentato il funzionamento oneshot del servizio e il controllo della pianificazione tramite timer systemd',
+                'Riordinata la procedura completa MoonCrater, Satellite, autorizzazione SSH e test manuale',
+            ],
+        ],
         '1.37' => [
             'date' => '2026-09-08',
             'changes' => [

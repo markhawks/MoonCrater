@@ -4,20 +4,18 @@ MoonCrater can receive timestamped Satellite exports over SSH and process its in
 minutes. Files are ordered by the timestamp in their name. Older files populate Migration Trends;
 the newest file is also reconciled against the current operational inventory.
 
-## 1. Configure the MoonCrater server
+## 1. Install or update the MoonCrater server
 
-Create an SSH key on the Satellite server (do not set a passphrase for an unattended systemd or
-cron job), copy only its public key to the MoonCrater server, then run:
+The RHEL 10 installer and updater automatically create:
 
-```bash
-sudo /opt/mooncrater/setup/rhel10/configure-satellite-ingest.sh /root/satellite-export.pub
-```
+- the dedicated `mooncrater-import` operating-system account and its home directory;
+- `/home/mooncrater-import/.ssh` with protected permissions;
+- the writable inbox `/opt/mooncrater/satellite-import-csv`;
+- `mooncrater-satellite-import.timer` and its `oneshot` service.
 
-This creates the dedicated `mooncrater-import` account and grants it access only to the inbox at
-`/opt/mooncrater/satellite-import-csv`. The normal RHEL installer and updater install and enable
-`mooncrater-satellite-import.timer`.
+No SSH public key is installed at this stage because it will be generated on the Satellite server.
 
-## 2. Configure the Satellite server
+## 2. Install the exporter on the Satellite server
 
 Copy both `install-on-satellite.sh` and `export-and-send.sh` to the same temporary directory on the
 Satellite server, then run:
@@ -29,9 +27,24 @@ sudo ./install-on-satellite.sh
 
 The installer asks for the MoonCrater server hostname or IP address. It then creates
 `/root/mooncrater-script/export_satellite_completo.sh`, installs and enables `crond`, generates a
-dedicated SSH key, writes the destination configuration, and schedules the export every day at
-exactly 02:00. It prints the public key and the command needed to authorize it on the MoonCrater
-server. After authorizing the key, run the installed export script once manually.
+dedicated SSH key without a passphrase, writes the destination configuration, and schedules the
+export every day at exactly 02:00.
+
+## 3. Authorize the Satellite public key on MoonCrater
+
+Copy only the public key printed by the Satellite installer to a temporary file on MoonCrater and
+run:
+
+```bash
+sudo /opt/mooncrater/setup/rhel10/configure-satellite-ingest.sh /path/to/mooncrater_export_ed25519.pub
+```
+
+This installs `authorized_keys` with the correct ownership and permissions. Then run the exporter
+once manually on Satellite to verify the complete export, SCP delivery, and MoonCrater import:
+
+```bash
+/root/mooncrater-script/export_satellite_completo.sh
+```
 
 The remaining defaults are:
 
@@ -51,10 +64,42 @@ The installed `/etc/cron.d/mooncrater-satellite-export` entry is:
 
 ## Operations
 
+The importer is not a continuously running daemon. `mooncrater-satellite-import.service` is a
+`oneshot` unit: it starts when requested by the timer, processes the inbox, and then normally
+returns to `inactive (dead)`. The persistent component visible between imports is
+`mooncrater-satellite-import.timer`.
+
+Check that the timer is enabled and see its next execution:
+
 ```bash
-systemctl status mooncrater-satellite-import.timer
-journalctl -u mooncrater-satellite-import.service
+sudo systemctl status mooncrater-satellite-import.timer
+sudo systemctl list-timers --all | grep mooncrater
+```
+
+Check the installed unit definitions:
+
+```bash
+sudo ls -l /etc/systemd/system/mooncrater-satellite-import.*
+sudo systemctl cat mooncrater-satellite-import.timer
+sudo systemctl cat mooncrater-satellite-import.service
+```
+
+Start an inbox import immediately and inspect its result:
+
+```bash
 sudo systemctl start mooncrater-satellite-import.service
+sudo systemctl status mooncrater-satellite-import.service
+sudo journalctl -u mooncrater-satellite-import.service -n 100 --no-pager
+```
+
+If the timer was not installed during an update, reinstall and enable the automation from the Git
+checkout, adapting the installation path when it is not `/opt/mooncrater`:
+
+```bash
+sudo MOONCRATER_INSTALL_DIR=/opt/mooncrater \
+  ./setup/rhel10/install-satellite-automation.sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now mooncrater-satellite-import.timer
 ```
 
 Successfully imported CSV files remain in the inbox as the source archive. Repeated timer runs skip

@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.37**.
+Versione applicativa corrente: **1.38**.
 
 Asset branding:
 
@@ -150,6 +150,33 @@ Per il funzionamento automatico, Satellite puo inviare via SCP file con nome
 MoonCrater controlla la cartella ogni cinque minuti: importa tutti i file nuovi in ordine temporale,
 usa il piu recente per inventario corrente, diff e statistiche, e conserva i precedenti nel grafico
 delle migrazioni. La configurazione completa e in `setup/satellite/README.md`.
+
+L'installer e l'updater RHEL 10 creano automaticamente l'account di sistema
+`mooncrater-import`, la relativa home e `.ssh`, la cartella di ricezione con i permessi corretti e
+le unita systemd. Successivamente occorre installare `setup/satellite/install-on-satellite.sh` sul
+server Satellite e autorizzare su MoonCrater la chiave pubblica generata, eseguendo:
+
+```bash
+sudo /opt/mooncrater/setup/rhel10/configure-satellite-ingest.sh /percorso/chiave-pubblica.pub
+```
+
+L'importatore non e un demone sempre attivo. `mooncrater-satellite-import.service` e un servizio
+systemd di tipo `oneshot`: viene avviato dal timer, elabora la cartella e poi torna normalmente nello
+stato `inactive (dead)`. La pianificazione persistente da controllare e
+`mooncrater-satellite-import.timer`:
+
+```bash
+sudo systemctl status mooncrater-satellite-import.timer
+sudo systemctl list-timers --all | grep mooncrater
+```
+
+Per avviare subito un controllo e consultarne il risultato:
+
+```bash
+sudo systemctl start mooncrater-satellite-import.service
+sudo systemctl status mooncrater-satellite-import.service
+sudo journalctl -u mooncrater-satellite-import.service -n 100 --no-pager
+```
 
 ## Import Zabbix
 

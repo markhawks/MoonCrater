@@ -12,8 +12,9 @@ sudo ./setup/rhel10/install.sh
 The installer prompts for the PostgreSQL and initial administrator passwords. It installs the
 required DNF packages, initializes PostgreSQL, creates the application role and database, installs
 the Apache virtual host, configures SELinux, optionally opens HTTP in firewalld, applies database
-migrations, creates the administrator, enables PostgreSQL and Apache at boot, and enables the
-five-minute Satellite inbox timer.
+migrations, creates the administrator, enables PostgreSQL and Apache at boot, creates the
+`mooncrater-import` operating-system account and home directory, prepares its Satellite inbox, and
+enables the five-minute Satellite inbox timer.
 
 Defaults can be changed with environment variables:
 
@@ -64,9 +65,16 @@ Application files are automatically restored if activation or the HTTP check fai
 migrations are not automatically reversed: use the reported PostgreSQL backup for a coordinated
 database restore if a migration itself must be rolled back.
 
-The updater also preserves `satellite-import-csv/` and refreshes the automatic import service.
-Configure key-based delivery from Satellite separately as documented in
+The updater also creates the import account when missing, preserves `satellite-import-csv/`, and
+refreshes the automatic import service. Install the Satellite exporter and then authorize its
+generated public key as documented in
 [`setup/satellite/README.md`](../satellite/README.md).
+
+The Satellite importer is a systemd `oneshot` service rather than a continuously running daemon.
+It is therefore normal for `mooncrater-satellite-import.service` to show `inactive (dead)` after a
+successful execution. Use `systemctl status mooncrater-satellite-import.timer` or
+`systemctl list-timers --all` to verify the persistent five-minute schedule. The Satellite feed
+documentation contains the complete diagnostic and manual-start commands.
 
 Optional update variables:
 

@@ -153,4 +153,7 @@ info 'Running MoonCrater checks'
 printf '\nMoonCrater installation completed.\n'
 printf 'URL: http://%s/\n' "$server_name"
 printf 'Administrator: %s\n' "$admin_user"
+printf 'Satellite import account: mooncrater-import\n'
+printf 'Automatic Satellite export setup: %s/setup/satellite/README.md\n' "$install_dir"
+printf 'Next, install setup/satellite/install-on-satellite.sh on Satellite; then authorize its public key with setup/rhel10/configure-satellite-ingest.sh.\n'
 printf 'Next step: configure HTTPS before exposing the portal outside a trusted network.\n'

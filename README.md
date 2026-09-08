@@ -24,7 +24,7 @@ MoonCrater provides a unified operational view of Linux patching inventories. It
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.37**.
+Current application version: **1.38**.
 
 ## Features
 
@@ -183,6 +183,11 @@ For unattended operation, Satellite can send timestamped exports by SCP to
 timestamp order, uses the newest one for the current inventory, and uses older files for Migration
 Trends. See [Automatic Satellite feed](setup/satellite/README.md) for SSH-key setup, the export
 script, scheduling, logs, and manual execution.
+
+The RHEL 10 installer and updater automatically create the dedicated `mooncrater-import` account,
+its home and protected `.ssh` directory, the writable inbox, and the systemd timer. The separate
+Satellite installer generates the source key; only that public key must then be authorized on
+MoonCrater with `configure-satellite-ingest.sh`.
 
 ## Zabbix import
 

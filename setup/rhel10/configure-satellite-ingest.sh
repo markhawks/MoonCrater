@@ -23,3 +23,4 @@ install -d -m 0750 -o "$import_user" -g "$import_user" "$install_dir/satellite-i
 restorecon -RF "$home_dir/.ssh" "$install_dir/satellite-import-csv" >/dev/null 2>&1 || true
 
 printf 'Satellite ingestion enabled for %s. Inbox: %s/satellite-import-csv\n' "$import_user" "$install_dir"
+printf 'Run the exporter once on Satellite to verify SCP delivery and automatic import.\n'

@@ -2,6 +2,24 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.38] - 2026-09-08
+
+### Added
+
+- Automatic creation of the `mooncrater-import` operating-system account during RHEL 10
+  installation and updates.
+- Automatic creation of its home, protected `.ssh` directory, and writable Satellite inbox with
+  the correct ownership and permissions.
+- Clear installer completion messages identifying the Satellite exporter and public-key
+  authorization steps.
+
+### Changed
+
+- Reordered the automatic-feed documentation into MoonCrater installation, Satellite exporter
+  installation, SSH public-key authorization, and manual end-to-end verification.
+- Documented that the importer is a systemd `oneshot` service and that its persistent schedule is
+  represented by `mooncrater-satellite-import.timer`.
+
 ## [1.37] - 2026-09-08
 
 ### Added
