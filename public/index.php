@@ -448,6 +448,20 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.37' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Aggiunta elaborazione automatica della cartella satellite-import-csv ogni cinque minuti',
+                'Il CSV Satellite piu recente aggiorna inventario, diff e statistiche; i precedenti alimentano lo storico migrazioni',
+                'Aggiunti timestamp data, ora e minuti ai nomi CSV e alla linea temporale Migration Trends',
+                'Aggiunti import cronologico, rilevamento dei file gia elaborati, retry degli errori e lock contro esecuzioni simultanee',
+                'Aggiunto trasferimento SCP atomico tramite file temporaneo per evitare import parziali',
+                'Aggiunti account SSH dedicato, servizio e timer systemd per il server MoonCrater',
+                'Aggiunto installer generico per Satellite con richiesta del server target, chiave SSH dedicata e cron giornaliero alle 02:00',
+                'Aggiunti import storico da cartella, data snapshot ricavata dal filename e reset sicuro del grafico',
+                'Preservata la cartella degli export Satellite durante gli aggiornamenti applicativi',
+            ],
+        ],
         '1.36' => [
             'date' => '2026-09-08',
             'changes' => [

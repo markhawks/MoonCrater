@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the MoonCrater Satellite CSV inbox
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=mooncrater-satellite-import.service
+
+[Install]
+WantedBy=timers.target

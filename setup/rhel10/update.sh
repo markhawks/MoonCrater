@@ -129,17 +129,19 @@ info 'Preparing the new application release'
 install_parent="$(dirname "$install_dir")"
 stage_dir="$(mktemp -d "${install_parent}/.mooncrater-update.XXXXXX")"
 chmod 0755 "$stage_dir"
-for item in app bin migrations public setup tests docs README.md SECURITY.md CONTRIBUTING.md LICENSE .env.example; do
+for item in app bin migrations public setup tests docs README.md CHANGELOG.md SECURITY.md CONTRIBUTING.md LICENSE .env.example; do
     [[ -e $source_dir/$item ]] || die "Release item missing: ${item}"
     cp -a "$source_dir/$item" "$stage_dir/"
 done
-if [[ -f $source_dir/CHANGELOG.md ]]; then
-    cp -a "$source_dir/CHANGELOG.md" "$stage_dir/"
-fi
 if [[ -d $install_dir/var ]]; then
     cp -a "$install_dir/var" "$stage_dir/"
 else
     install -d -m 0750 "$stage_dir/var/backups" "$stage_dir/var/uploads"
+fi
+if [[ -d $install_dir/satellite-import-csv ]]; then
+    cp -a "$install_dir/satellite-import-csv" "$stage_dir/"
+else
+    install -d -m 0750 "$stage_dir/satellite-import-csv"
 fi
 
 info 'Applying database migrations'
@@ -159,6 +161,7 @@ mv -- "$stage_dir" "$install_dir"
 stage_dir=''
 restorecon -RF "$install_dir/public"
 systemctl reload httpd
+MOONCRATER_INSTALL_DIR="$install_dir" "$install_dir/setup/rhel10/install-satellite-automation.sh"
 
 http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
     --max-time 10 "$health_url")"

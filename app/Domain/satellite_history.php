@@ -3,20 +3,27 @@ declare(strict_types=1);
 
 function satellite_snapshot_date_from_filename(string $filename): ?DateTimeImmutable
 {
+    $timestamp = satellite_snapshot_datetime_from_filename($filename);
+    return $timestamp?->setTime(0, 0);
+}
+
+function satellite_snapshot_datetime_from_filename(string $filename): ?DateTimeImmutable
+{
     $name = basename($filename);
     $candidates = [];
-    if (preg_match_all('/(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)/', $name, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) $candidates[] = [$match[3], $match[2], $match[1]];
+    if (preg_match_all('/(?<!\d)(\d{2})(\d{2})(\d{4})(?:[-_](\d{2})(\d{2}))?(?!\d)/', $name, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) $candidates[] = [$match[3], $match[2], $match[1], $match[4] ?? '00', $match[5] ?? '00'];
     }
-    if (preg_match_all('/(?<!\d)(\d{4})[-_](\d{2})[-_](\d{2})(?!\d)/', $name, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) $candidates[] = [$match[1], $match[2], $match[3]];
+    if (preg_match_all('/(?<!\d)(\d{4})[-_](\d{2})[-_](\d{2})(?:[-_](\d{2})(\d{2}))?(?!\d)/', $name, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) $candidates[] = [$match[1], $match[2], $match[3], $match[4] ?? '00', $match[5] ?? '00'];
     }
-    if (preg_match_all('/(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)/', $name, $matches, PREG_SET_ORDER)) {
-        foreach ($matches as $match) $candidates[] = [$match[1], $match[2], $match[3]];
+    if (preg_match_all('/(?<!\d)(\d{4})(\d{2})(\d{2})(?:[-_](\d{2})(\d{2}))?(?!\d)/', $name, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) $candidates[] = [$match[1], $match[2], $match[3], $match[4] ?? '00', $match[5] ?? '00'];
     }
-    foreach (array_reverse($candidates) as [$year, $month, $day]) {
-        if (checkdate((int) $month, (int) $day, (int) $year)) {
-            return new DateTimeImmutable(sprintf('%04d-%02d-%02d', $year, $month, $day));
+    foreach (array_reverse($candidates) as [$year, $month, $day, $hour, $minute]) {
+        if (checkdate((int) $month, (int) $day, (int) $year)
+            && (int) $hour <= 23 && (int) $minute <= 59) {
+            return new DateTimeImmutable(sprintf('%04d-%02d-%02d %02d:%02d:00', $year, $month, $day, $hour, $minute));
         }
     }
     return null;
@@ -32,12 +39,10 @@ function satellite_snapshot_resolve_date(string $explicitDate, string $filename)
             throw new InvalidArgumentException('Invalid explicit snapshot date');
         }
         if ($date > new DateTimeImmutable('today')) throw new InvalidArgumentException('Snapshot date is in the future');
-        if ($date > new DateTimeImmutable('today')) throw new InvalidArgumentException('Snapshot date is in the future');
         return $date;
     }
     $date = satellite_snapshot_date_from_filename($filename);
     if (!$date) throw new InvalidArgumentException('Snapshot date not found in filename');
-    if ($date > new DateTimeImmutable('today')) throw new InvalidArgumentException('Snapshot date is in the future');
     if ($date > new DateTimeImmutable('today')) throw new InvalidArgumentException('Snapshot date is in the future');
     return $date;
 }
@@ -96,11 +101,11 @@ function satellite_snapshot_read_csv(string $file, DateTimeImmutable $snapshotDa
 function satellite_snapshot_store(PDO $pdo, string $filename, DateTimeImmutable $date, array $snapshot): array
 {
     $timezone = new DateTimeZone(date_default_timezone_get());
-    $importedAt = new DateTimeImmutable($date->format('Y-m-d') . ' 12:00:00', $timezone);
+    $importedAt = $date->setTimezone($timezone);
     $pdo->beginTransaction();
     try {
-        $delete = $pdo->prepare('DELETE FROM satellite_import_runs WHERE imported_at::date = ?');
-        $delete->execute([$date->format('Y-m-d')]);
+        $delete = $pdo->prepare('DELETE FROM satellite_import_runs WHERE source_filename = ?');
+        $delete->execute([basename($filename)]);
         $replaced = $delete->rowCount();
         $run = $pdo->prepare("
             INSERT INTO satellite_import_runs

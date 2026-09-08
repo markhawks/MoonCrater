@@ -24,7 +24,7 @@ MoonCrater provides a unified operational view of Linux patching inventories. It
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.36**.
+Current application version: **1.37**.
 
 ## Features
 
@@ -177,6 +177,12 @@ the server, run:
 ```bash
 sudo php bin/import-satellite-history-dir.php /path/to/satellite-exports
 ```
+
+For unattended operation, Satellite can send timestamped exports by SCP to
+`satellite-import-csv/`. MoonCrater checks the inbox every five minutes, imports all new files in
+timestamp order, uses the newest one for the current inventory, and uses older files for Migration
+Trends. See [Automatic Satellite feed](setup/satellite/README.md) for SSH-key setup, the export
+script, scheduling, logs, and manual execution.
 
 ## Zabbix import
 

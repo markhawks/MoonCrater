@@ -22,6 +22,11 @@ done
 
 grep -q "PHP_SAPI !== 'cli'" bin/import_zabbix.php
 grep -q "PHP_SAPI !== 'cli'" bin/import-satellite-history-dir.php
+grep -q "PHP_SAPI !== 'cli'" bin/process-satellite-inbox.php
+grep -q "flock(\$lock, LOCK_EX | LOCK_NB)" bin/process-satellite-inbox.php
+grep -q "\.part" setup/satellite/export-and-send.sh
+test -s setup/systemd/mooncrater-satellite-import.service
+test -s setup/systemd/mooncrater-satellite-import.timer
 grep -q "session_regenerate_id" public/login.php
 grep -q "PDO::PARAM_BOOL" public/import_satellite.php
 test "$(find public -maxdepth 1 -type f ! -name '*.php' ! -name '.htaccess' | wc -l)" -eq 0

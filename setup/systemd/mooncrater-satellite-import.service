@@ -1,0 +1,16 @@
+[Unit]
+Description=MoonCrater automatic Satellite CSV import
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/php /opt/mooncrater/bin/process-satellite-inbox.php /opt/mooncrater/satellite-import-csv
+User=root
+Group=root
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/mooncrater/var
+

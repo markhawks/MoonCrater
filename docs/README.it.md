@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.36**.
+Versione applicativa corrente: **1.37**.
 
 Asset branding:
 
@@ -133,8 +133,8 @@ La pagina mostra:
 - quattro tabelle diff, una per ogni major release.
 
 La data manuale del singolo import e opzionale: se non viene indicata, viene estratta dal nome del
-file (`DDMMYYYY`, `YYYY-MM-DD` o `YYYYMMDD`). Se esiste gia uno snapshot nella stessa data, il nuovo
-import lo sostituisce. Gli amministratori possono azzerare esclusivamente grafico e storico, senza
+file (`DDMMYYYY`, `YYYY-MM-DD` o `YYYYMMDD`, con ora e minuti opzionali). Un nuovo import con lo
+stesso nome sostituisce quello precedente. Gli amministratori possono azzerare esclusivamente grafico e storico, senza
 toccare l'inventario operativo, oppure selezionare una cartella locale dal browser.
 
 Per ricostruire lo storico usando una directory gia presente sul server:
@@ -144,6 +144,12 @@ sudo php bin/import-satellite-history-dir.php /percorso/export-satellite
 ```
 
 Il comando ignora i CSV non Satellite e quelli privi di data nel nome.
+
+Per il funzionamento automatico, Satellite puo inviare via SCP file con nome
+`export_satellite_completo-DDMMYYYY-HHMM.csv` nella cartella `satellite-import-csv/`. Il timer di
+MoonCrater controlla la cartella ogni cinque minuti: importa tutti i file nuovi in ordine temporale,
+usa il piu recente per inventario corrente, diff e statistiche, e conserva i precedenti nel grafico
+delle migrazioni. La configurazione completa e in `setup/satellite/README.md`.
 
 ## Import Zabbix
 

@@ -32,16 +32,13 @@ if ($isCli) {
 }
 $sourceFilename = $isCli ? basename($file) : basename((string)($upload['name'] ?? 'satellite.csv'));
 require_once __DIR__ . '/../app/Domain/satellite_history.php';
-$snapshotDate = satellite_snapshot_date_from_filename($sourceFilename);
-if (!$snapshotDate || $snapshotDate > new DateTimeImmutable('today')) $snapshotDate = new DateTimeImmutable('today');
+$snapshotDate = satellite_snapshot_datetime_from_filename($sourceFilename);
+if (!$snapshotDate || $snapshotDate > new DateTimeImmutable('now')) $snapshotDate = new DateTimeImmutable('now');
 $snapshotReference = new DateTimeImmutable(
     $snapshotDate->format('Y-m-d') . ' 23:59:59',
     new DateTimeZone(date_default_timezone_get())
 );
-$snapshotImportedAt = new DateTimeImmutable(
-    $snapshotDate->format('Y-m-d') . ' 12:00:00',
-    new DateTimeZone(date_default_timezone_get())
-);
+$snapshotImportedAt = $snapshotDate;
 
 $handle = fopen($file, 'rb');
 if ($handle === false) {
@@ -139,12 +136,13 @@ try {
           )
     ");
 
-    $replaceRunStmt = $pdo->prepare('DELETE FROM satellite_import_runs WHERE imported_at::date = ?');
-    $replaceRunStmt->execute([$snapshotDate->format('Y-m-d')]);
+    $replaceRunStmt = $pdo->prepare('DELETE FROM satellite_import_runs WHERE source_filename = ?');
+    $replaceRunStmt->execute([$sourceFilename]);
+    $pdo->exec('UPDATE satellite_import_runs SET is_current = FALSE WHERE is_current = TRUE');
     $runStmt = $pdo->prepare("
         INSERT INTO satellite_import_runs
-            (imported_at, source_filename, imported_count, skipped_count, missing_count, has_status_column)
-        VALUES (?, ?, ?, ?, ?, ?)
+            (imported_at, source_filename, imported_count, skipped_count, missing_count, has_status_column, is_current)
+        VALUES (?, ?, ?, ?, ?, ?, TRUE)
         RETURNING id
     ");
     $runStmt->bindValue(1, $snapshotImportedAt->format(DateTimeInterface::ATOM), PDO::PARAM_STR);

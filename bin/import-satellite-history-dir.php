@@ -35,7 +35,7 @@ foreach ($files as $file) {
         $skipped++;
         continue;
     }
-    $date = satellite_snapshot_date_from_filename($name);
+    $date = satellite_snapshot_datetime_from_filename($name);
     if (!$date) {
         fwrite(STDOUT, "SKIP  {$name}: no date in filename\n");
         $skipped++;

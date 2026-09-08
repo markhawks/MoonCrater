@@ -57,7 +57,7 @@ info 'Installing RHEL packages'
 dnf install -y \
     httpd php php-cli php-pgsql php-mbstring \
     postgresql postgresql-server policycoreutils-python-utils \
-    firewalld git
+    firewalld git openssh-server
 
 info 'Installing application files'
 if [[ $source_dir != "$install_dir" ]]; then
@@ -135,6 +135,10 @@ unset MOONCRATER_ADMIN_PASSWORD admin_password db_password
 info 'Validating and starting Apache'
 apachectl configtest
 systemctl enable --now httpd
+systemctl enable --now sshd
+
+info 'Enabling automatic Satellite inbox processing'
+MOONCRATER_INSTALL_DIR="$install_dir" "$install_dir/setup/rhel10/install-satellite-automation.sh"
 
 if [[ $configure_firewall == yes ]]; then
     info 'Enabling firewalld and allowing HTTP'

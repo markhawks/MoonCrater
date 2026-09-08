@@ -12,7 +12,8 @@ sudo ./setup/rhel10/install.sh
 The installer prompts for the PostgreSQL and initial administrator passwords. It installs the
 required DNF packages, initializes PostgreSQL, creates the application role and database, installs
 the Apache virtual host, configures SELinux, optionally opens HTTP in firewalld, applies database
-migrations, creates the administrator and enables PostgreSQL and Apache at boot.
+migrations, creates the administrator, enables PostgreSQL and Apache at boot, and enables the
+five-minute Satellite inbox timer.
 
 Defaults can be changed with environment variables:
 
@@ -62,6 +63,10 @@ database itself is not renamed or modified by this filesystem migration. The for
 Application files are automatically restored if activation or the HTTP check fails. Database
 migrations are not automatically reversed: use the reported PostgreSQL backup for a coordinated
 database restore if a migration itself must be rolled back.
+
+The updater also preserves `satellite-import-csv/` and refreshes the automatic import service.
+Configure key-based delivery from Satellite separately as documented in
+[`setup/satellite/README.md`](../satellite/README.md).
 
 Optional update variables:
 

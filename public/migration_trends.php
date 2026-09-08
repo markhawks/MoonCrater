@@ -148,7 +148,7 @@ $error = $errorMessages[(string)($_GET['error'] ?? '')] ?? '';
             <?php endfor; ?>
             <?php foreach ($runs as $runIndex => $run): $axisX = $runXPositions[$runIndex]; $axisY = $padTop + $plotHeight; ?>
                 <line x1="<?= $axisX ?>" y1="<?= $axisY ?>" x2="<?= $axisX ?>" y2="<?= $axisY + 6 ?>" stroke="#7f8c8d"/>
-                <text x="<?= $axisX ?>" y="<?= $axisY + 23 ?>" fill="#abb2b9" font-size="11" text-anchor="end" transform="rotate(-35 <?= $axisX ?> <?= $axisY + 23 ?>)"><?= (new DateTimeImmutable($run['imported_at']))->format('d/m/Y') ?></text>
+                <text x="<?= $axisX ?>" y="<?= $axisY + 23 ?>" fill="#abb2b9" font-size="11" text-anchor="end" transform="rotate(-35 <?= $axisX ?> <?= $axisY + 23 ?>)"><?= (new DateTimeImmutable($run['imported_at']))->format('d/m/Y H:i') ?></text>
             <?php endforeach; ?>
             <text x="<?= $padLeft + $plotWidth / 2 ?>" y="<?= $chartHeight - 5 ?>" fill="#7f8c8d" font-size="11" text-anchor="middle">Data snapshot</text>
             <?php foreach ($majors as $major): $points = chart_points($majorTotals[$major] ?? [], $runXPositions, $maxTotal, $padTop, $plotHeight); ?>
@@ -175,7 +175,7 @@ $error = $errorMessages[(string)($_GET['error'] ?? '')] ?? '';
                         $position = $runPositions[$runId];
                         $priorRun = $position > 0 ? $runs[$position - 1] : null;
                     ?><tr title="<?= htmlspecialchars($run['source_filename'], ENT_QUOTES, 'UTF-8') ?>">
-                        <td><?= (new DateTimeImmutable($run['imported_at']))->format('d/m/Y') ?></td>
+                        <td><?= (new DateTimeImmutable($run['imported_at']))->format('d/m/Y H:i') ?></td>
                         <?php foreach ($majorVersions as $version):
                             $value = $runCounts[$version] ?? 0;
                             $prior = $priorRun ? ($byRun[(int)$priorRun['id']][$version] ?? 0) : null;

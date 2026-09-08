@@ -28,6 +28,7 @@ $reference = new DateTimeImmutable('2026-09-08 12:00:00 UTC');
 if (satellite_status_from_checkin('2026-08-10 12:00:00 UTC', $reference) !== 'active') exit(1);
 if (satellite_status_from_checkin('2026-08-08 11:59:59 UTC', $reference) !== 'unhealthy') exit(1);
 if (satellite_snapshot_date_from_filename('export_satellite_completo-03092026.csv')?->format('Y-m-d') !== '2026-09-03') exit(1);
+if (satellite_snapshot_datetime_from_filename('export_satellite_completo-08092026-2245.csv')?->format('Y-m-d H:i') !== '2026-09-08 22:45') exit(1);
 if (satellite_snapshot_date_from_filename('export-2026-07-02.csv')?->format('Y-m-d') !== '2026-07-02') exit(1);
 if (satellite_snapshot_date_from_filename('export-without-date.csv') !== null) exit(1);
 $snapshotFixture = tmpfile();
