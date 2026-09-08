@@ -435,7 +435,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         }
     </style>
     <script>window.CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;</script>
-<?php if (!$is_admin): ?><style>.btn-exclude, [onclick^="infraEditStart"], form[action="backup_db.php"], #importForm { display:none !important; }.note-cell-style input, .note-cell-style textarea { pointer-events:none; opacity:.75; }</style><?php endif; ?>
+<?php if (!$is_admin): ?><style>.btn-exclude, [onclick^="infraEditStart"], form[action="backup_db.php"], #importForm, #ivantiImportForm { display:none !important; }.note-cell-style input, .note-cell-style textarea { pointer-events:none; opacity:.75; }</style><?php endif; ?>
 </head>
 
 <body>
@@ -448,6 +448,15 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.33' => [
+            'date' => '2026-09-08',
+            'changes' => [
+                'Aggiunto import Ivanti transazionale da dashboard e CLI',
+                'Supportato il formato CSV Device Name, OS Name, Address e Last Hardware Scan Date',
+                'Gli aggiornamenti Ivanti preservano gli stati excluded e decommissioned',
+                'Aggiunta cronologia tecnica degli import Ivanti con conteggi inseriti, aggiornati e scartati',
+            ],
+        ],
         '1.32' => [
             'date' => '2026-09-08',
             'changes' => [
@@ -727,6 +736,16 @@ if (file_exists('import_satellite.php')) {
             <strong>Backup Successful!</strong><br>
             <small style="color: #155724; opacity: 0.85;">Snapshot tables have been successfully frozen inside the database at local time.</small>
         </div>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['ivanti_success'])): ?>
+    <div style="background-color: #d4edda; color: #155724; padding: 12px 20px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #c3e6cb; font-family: sans-serif;">
+        <strong>Ivanti import completed.</strong>
+        <?= (int) $_GET['ivanti_success'] ?> imported,
+        <?= (int) ($_GET['ivanti_inserted'] ?? 0) ?> inserted,
+        <?= (int) ($_GET['ivanti_updated'] ?? 0) ?> updated,
+        <?= (int) ($_GET['ivanti_skipped'] ?? 0) ?> skipped.
     </div>
 <?php endif; ?>
 
@@ -1099,6 +1118,13 @@ if (file_exists('import_satellite.php')) {
                 <input type="file" name="satellite_csv" id="fileInput" style="display: none;" onchange="document.getElementById('importForm').submit()">
                 <button type="button" onclick="document.getElementById('fileInput').click()" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(230,126,34,0.12); color: #e67e22; font-size: 12px; cursor: pointer; font-weight: bold; text-align: left;">
                     📥 Import Satellite CSV
+                </button>
+            </form>
+            <form action="import_ivanti.php" method="POST" enctype="multipart/form-data" id="ivantiImportForm" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="file" name="ivanti_csv" accept=".csv,text/csv" id="ivantiFileInput" style="display: none;" onchange="document.getElementById('ivantiImportForm').submit()">
+                <button type="button" onclick="document.getElementById('ivantiFileInput').click()" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(52,152,219,0.12); color: #3498db; font-size: 12px; cursor: pointer; font-weight: bold; text-align: left;">
+                    📥 Import Ivanti CSV
                 </button>
             </form>
         </div>

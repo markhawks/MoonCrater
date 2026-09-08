@@ -13,7 +13,7 @@ for removed in add_admin.php add_user.php add_users.php; do
     test ! -e "public/$removed"
 done
 
-for endpoint in action.php action_infra.php action_zabbix.php backup_db.php save_note.php toggle_decommission.php; do
+for endpoint in action.php action_infra.php action_zabbix.php backup_db.php import_ivanti.php save_note.php toggle_decommission.php; do
     test -s "public/$endpoint"
     grep -q "require_admin" "public/$endpoint"
     grep -q "require_csrf" "public/$endpoint"

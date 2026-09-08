@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.32**.
+Versione applicativa corrente: **1.33**.
 
 Asset branding:
 
@@ -83,6 +83,16 @@ php bin/create-admin.php admin
 La migrazione `000` rende installabile un database vuoto. La migrazione `003` crea la baseline
 solo se non esistono run storici. Include
 esclusivamente host `active` ed esclude i ruoli `satellite` e `capsule`.
+
+## Import Ivanti
+
+Gli amministratori possono importare dalla dashboard il CSV Ivanti con intestazioni `Device Name`,
+`OS Name`, `Address` e `Last Hardware Scan Date`. L'import aggiorna o inserisce gli host senza
+rimuovere quelli assenti e conserva gli stati `excluded` e `decommissioned`. Da CLI:
+
+```bash
+php public/import_ivanti.php /percorso/inventario_ivanti.csv
+```
 
 ## Import Satellite corrente
 

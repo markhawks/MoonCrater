@@ -24,7 +24,7 @@ MoonCreater provides a unified operational view of Linux patching inventories. I
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.32**.
+Current application version: **1.33**.
 
 ## Features
 
@@ -157,6 +157,13 @@ Administrators can import the current inventory from the dashboard. CLI usage is
 
 ```bash
 php public/import_satellite.php /path/to/satellite-inventory.csv
+```
+
+Ivanti CSV files can also be imported from the dashboard or CLI. Existing `excluded` and
+`decommissioned` states are preserved, and hosts absent from a new Ivanti file are left unchanged:
+
+```bash
+php public/import_ivanti.php /path/to/ivanti.csv
 ```
 
 Historical CSV files must be imported from the Migration Trends page. Historical imports create
