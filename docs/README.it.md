@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da Ivanti,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.38**.
+Versione applicativa corrente: **1.39**.
 
 Asset branding:
 
@@ -35,6 +35,7 @@ Vedere `docs/ARCHITECTURE.md` per i confini e le responsabilità delle directory
 - Statistiche dedicate per RHEL 7, 8, 9 e 10.
 - Inventario e avanzamento della migrazione Zabbix.
 - Storico degli import Satellite con grafico e diff per minor release RHEL.
+- Diff Inventory View tra CSV Ivanti e Satellite, suddivisa per famiglia e release Linux.
 - Gestione utenti con ruoli `admin` e `user`.
 - Gestione del logo Customer da Settings, con ripristino dell'icona predefinita.
 - Assegnazione amministrativa degli hostname ai ruoli Satellite e Capsule.
@@ -177,6 +178,24 @@ sudo systemctl start mooncrater-satellite-import.service
 sudo systemctl status mooncrater-satellite-import.service
 sudo journalctl -u mooncrater-satellite-import.service -n 100 --no-pager
 ```
+
+## Diff Inventory View
+
+La dashboard contiene un collegamento alla nuova vista di confronto in sola lettura. La pagina usa
+i CSV piu recenti presenti in `ivanti-import-csv/` e `satellite-import-csv/`, normalizza gli
+hostname e divide i risultati nei riquadri Red Hat Enterprise Linux, Oracle Linux, SUSE Linux,
+Ubuntu, CentOS, Retired e Unknown.
+
+Ogni riquadro mostra totali Ivanti e Satellite, contatori per release, anomalie oltre 30 giorni e
+ordinamento crescente/decrescente per hostname e sistema operativo di entrambe le fonti. Le righe
+con Last Check-in Satellite oltre 30 giorni rispetto alla data dello snapshot sono evidenziate in
+giallo fluorescente. Se il CSV Ivanti non contiene Scan Date, viene usata la data di estrazione nel
+nome del file. I CSV restano locali, sono esclusi da Git e le relative directory vengono preservate
+dagli aggiornamenti RHEL 10.
+
+Nella dashboard, Unified Inventory View e Satellite Only sono chiuse inizialmente e possono essere
+aperte cliccando l'intera barra del titolo. Ivanti Hostname e visibile di default; nella tabella
+Satellite Only vale sempre `N/A`.
 
 ## Import Zabbix
 

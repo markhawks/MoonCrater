@@ -2,6 +2,26 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.39] - 2026-09-11
+
+### Added
+
+- New read-only Diff Inventory View comparing the latest local Ivanti and Satellite CSV snapshots.
+- Linux-family sections for Red Hat Enterprise Linux, Oracle Linux, SUSE Linux, Ubuntu, CentOS,
+  Retired, and Unknown, with per-release counters.
+- Separate Ivanti/Satellite totals and per-section counts of check-in anomalies older than 30 days.
+- Sortable Ivanti and Satellite hostname and OS columns in every comparison table.
+- Fluorescent-yellow highlighting for stale Satellite check-ins relative to the snapshot date.
+- Automatic extraction-date fallback for Ivanti CSV files without a Scan Date column.
+
+### Changed
+
+- Unified Inventory View and Satellite Only are collapsed by default and toggle from their complete
+  title bars using compact chevrons.
+- Ivanti Hostname is visible by default; Satellite Only explicitly displays `N/A` in that column.
+- Full CSV export mappings now match the updated Satellite Only and Unified Inventory structures.
+- RHEL 10 installation and updates create or preserve the local `ivanti-import-csv` directory.
+
 ## [1.38] - 2026-09-08
 
 ### Added

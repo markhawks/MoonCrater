@@ -4,6 +4,7 @@ var/*
 !var/.gitkeep
 csv/*.csv
 satellite-import-csv/*.csv
+ivanti-import-csv/*.csv
 zabbix-import-csv/*.csv
 .idea/
 .vscode/

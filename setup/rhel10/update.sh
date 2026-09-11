@@ -143,6 +143,11 @@ if [[ -d $install_dir/satellite-import-csv ]]; then
 else
     install -d -m 0750 "$stage_dir/satellite-import-csv"
 fi
+if [[ -d $install_dir/ivanti-import-csv ]]; then
+    cp -a "$install_dir/ivanti-import-csv" "$stage_dir/"
+else
+    install -d -m 0750 "$stage_dir/ivanti-import-csv"
+fi
 
 info 'Applying database migrations'
 export DB_HOST="$db_host" DB_PORT="$db_port" DB_NAME="$db_name" DB_USER="$db_user" DB_PASS="$db_pass"

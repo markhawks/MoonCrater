@@ -24,7 +24,7 @@ MoonCrater provides a unified operational view of Linux patching inventories. It
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.38**.
+Current application version: **1.39**.
 
 ## Features
 
@@ -33,6 +33,7 @@ Current application version: **1.38**.
 - Dedicated management for Satellite and Capsule infrastructure hosts.
 - RHEL 7, 8, 9, and 10 inventory and kernel statistics.
 - Historical Satellite imports with migration charts and per-release differences.
+- Dedicated Ivanti/Satellite Diff Inventory View grouped by Linux family and release.
 - Zabbix inventory and migration progress.
 - Patching notes and planned migration dates.
 - Administrator and read-only user roles.
@@ -188,6 +189,19 @@ The RHEL 10 installer and updater automatically create the dedicated `mooncrater
 its home and protected `.ssh` directory, the writable inbox, and the systemd timer. The separate
 Satellite installer generates the source key; only that public key must then be authorized on
 MoonCrater with `configure-satellite-ingest.sh`.
+
+## Diff Inventory View
+
+The dashboard links to a read-only comparison page that loads the newest timestamped CSV from
+`ivanti-import-csv/` and `satellite-import-csv/`. It correlates normalized hostnames and groups the
+result into Red Hat Enterprise Linux, Oracle Linux, SUSE Linux, Ubuntu, CentOS, Retired, and Unknown
+sections. Each section shows separate Ivanti and Satellite totals, release counters, sortable source
+hostname/OS columns, and fluorescent-yellow rows for Satellite check-ins older than 30 days relative
+to the Satellite snapshot date.
+
+Source CSV files remain local and are excluded from Git. If an Ivanti export has no Scan Date
+column, the view uses the extraction date encoded in its filename. The RHEL 10 updater preserves
+both CSV inbox directories.
 
 ## Zabbix import
 

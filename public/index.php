@@ -448,6 +448,19 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.39' => [
+            'date' => '2026-09-11',
+            'changes' => [
+                'Aggiunta Diff Inventory View per confrontare gli snapshot CSV Ivanti e Satellite',
+                'Inventario diff suddiviso per RHEL, Oracle Linux, SUSE, Ubuntu, CentOS, Retired e Unknown con contatori release',
+                'Aggiunti totali Ivanti e Satellite, ordinamento colonne e conteggio anomalie per ogni riquadro',
+                'Evidenziati in giallo fluorescente i Last Check-in Satellite oltre 30 giorni rispetto allo snapshot',
+                'Usata automaticamente la data di estrazione nel filename quando il CSV Ivanti non contiene Scan Date',
+                'Unified Inventory View e Satellite Only rese collassabili dalla barra del titolo e chiuse di default',
+                'Ivanti Hostname visibile di default e valorizzato N/A nella vista Satellite Only',
+                'Aggiornati export CSV e persistenza della directory locale ivanti-import-csv durante gli update',
+            ],
+        ],
         '1.38' => [
             'date' => '2026-09-08',
             'changes' => [
@@ -1073,6 +1086,7 @@ if (file_exists('import_satellite.php')) {
             ['url' => 'kernel_stats.php',      'label' => 'Kernel stats',  'icon' => '⚙️'],
             ['url' => 'statistics_zabbix.php', 'label' => 'Zabbix stats',  'icon' => '📡'],
             ['url' => 'migration_trends.php', 'label' => 'Migration trends', 'icon' => '&#8644;'],
+            ['url' => 'diff_inventory.php', 'label' => 'Diff Inventory View', 'icon' => '&#8646;'],
         ];
         foreach ($stat_links as $lnk): ?>
             <a href="<?= $lnk['url'] ?>" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03); color: #e5e8e8; text-decoration: none; font-size: 12px; transition: background 0.15s; white-space: nowrap;">
@@ -1218,7 +1232,7 @@ if (file_exists('import_satellite.php')) {
             <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
                 <span class="column-toggle-label">👁️ Show/Hide Columns:</span>
                 <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-ivanti-hostname" onchange="toggleColumn('col-iv-hostname', this.checked)"> Ivanti Hostname
+                    <input type="checkbox" id="toggle-ivanti-hostname" onchange="toggleColumn('col-iv-hostname', this.checked)" checked> Ivanti Hostname
                 </label>
                 <label class="toggle-checkbox-label">
                     <input type="checkbox" id="toggle-ivanti-scan" onchange="toggleColumn('col-iv-scan', this.checked)"> Ivanti Scan Date
@@ -1254,13 +1268,16 @@ if (file_exists('import_satellite.php')) {
 
 
     <div class="card">
-        <h2>Unified Inventory View</h2>
+        <button type="button" id="toggle-unified-inventory" aria-expanded="false" aria-controls="unified-inventory-content" aria-label="Toggle Unified Inventory View" onclick="toggleInventorySection(this, 'unified-inventory-content', 'unified-inventory-arrow', 'unified-inventory-pagination')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 2px 10px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#e5e8e8;cursor:pointer;text-align:left;">
+            <span style="font-size:1.5em;font-weight:700;">Unified Inventory View</span><span id="unified-inventory-arrow" aria-hidden="true" style="font-size:20px;color:#5dade2;transition:transform .15s;">▸</span>
+        </button>
+        <div id="unified-inventory-content" hidden style="margin-top:16px;">
         <div class="table-wrapper">
             <table class="table" id="mainInventoryTable">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th class="col-iv-hostname col-hidden">Ivanti Hostname</th>
+                        <th class="col-iv-hostname">Ivanti Hostname</th>
                         <th class="col-iv-os col-hidden">Ivanti OS</th>
                         <th class="col-iv-ip col-hidden">Ivanti IP</th>
                         <th class="col-iv-scan col-hidden">Scan Date</th>
@@ -1401,7 +1418,7 @@ if (file_exists('import_satellite.php')) {
 
                 <tr class="<?= $row_class ?>">
                     <td><?= $counter++ ?></td>
-                    <td class="col-iv-hostname col-hidden"><?= htmlspecialchars($row['hostname'] ?? '') ?></td>
+                    <td class="col-iv-hostname"><?= htmlspecialchars($row['hostname'] ?? '') ?></td>
                     <td class="col-iv-os col-hidden"><?= htmlspecialchars($row['os'] ?? '') ?></td>
                     <td class="col-iv-ip col-hidden"><?= htmlspecialchars($row['ip'] ?? '') ?></td>
                     <td class="col-date col-iv-scan col-hidden <?= $date_class ?>"><?= htmlspecialchars($scan_date_raw ?: 'N/D') ?> <?= $date_class ? '⚠️' : '' ?></td>
@@ -1476,6 +1493,7 @@ if (file_exists('import_satellite.php')) {
 
         </table>
     </div>
+    </div>
 </div>
 
 
@@ -1483,7 +1501,7 @@ if (file_exists('import_satellite.php')) {
 
 
 <?php $main_pages = max(1, (int)ceil($filtered_main_count / $perPage)); if ($main_pages > 1): ?>
-<div class="card" style="display:flex;justify-content:center;gap:12px;padding:10px">
+<div class="card" id="unified-inventory-pagination" style="display:none;justify-content:center;gap:12px;padding:10px">
 <?php if ($page > 1): ?><a href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ["page" => $page - 1]))) ?>">Previous</a><?php endif; ?>
 <span>Page <?= $page ?> / <?= $main_pages ?></span>
 <?php if ($page < $main_pages): ?><a href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ["page" => $page + 1]))) ?>">Next</a><?php endif; ?>
@@ -1491,13 +1509,17 @@ if (file_exists('import_satellite.php')) {
 <?php endif; ?>
 
     <div class="card">
-    <h2>Satellite Only (Not in Ivanti)</h2>
+    <button type="button" id="toggle-satellite-only" aria-expanded="false" aria-controls="satellite-only-content" aria-label="Toggle Satellite Only inventory" onclick="toggleInventorySection(this, 'satellite-only-content', 'satellite-only-arrow')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 2px 10px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#e5e8e8;cursor:pointer;text-align:left;">
+        <span style="font-size:1.5em;font-weight:700;">Satellite Only (Not in Ivanti)</span><span id="satellite-only-arrow" aria-hidden="true" style="font-size:20px;color:#5dade2;transition:transform .15s;">▸</span>
+    </button>
+    <div id="satellite-only-content" hidden style="margin-top:16px;">
     <div class="table-wrapper">
-        <table class="table">
+        <table class="table" id="satelliteOnlyTable">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Hostname</th>
+                    <th class="col-iv-hostname">Ivanti Hostname</th>
+                    <th>Satellite Hostname</th>
                     <th>OS</th>
                     <th>IP</th>
                     <th>Kernel</th>
@@ -1552,6 +1574,7 @@ if (file_exists('import_satellite.php')) {
 
                     <tr class="<?= $s_class ?>">
                         <td><?= $s_counter++ ?></td>
+                        <td class="col-iv-hostname">N/A</td>
                         <td><?= htmlspecialchars($sat_data['hostname'] ?? '') ?></td>
                         <td><?= htmlspecialchars($sat_data['os'] ?? '') ?></td>
                         <td><?= htmlspecialchars($sat_data['ip'] ?? '') ?></td>
@@ -1604,6 +1627,7 @@ if (file_exists('import_satellite.php')) {
                 } ?>
                 </tbody>
             </table>
+        </div>
         </div>
     </div>
 </div>
@@ -1727,6 +1751,17 @@ function updateExcludedCount(delta) {
         const current = parseInt(badge.textContent.trim()) || 0;
         badge.textContent = Math.max(0, current + delta);
     }
+}
+
+function toggleInventorySection(button, contentId, arrowId, paginationId = '') {
+    const content = document.getElementById(contentId);
+    const pagination = paginationId ? document.getElementById(paginationId) : null;
+    const arrow = document.getElementById(arrowId);
+    const opening = content.hidden;
+    content.hidden = !opening;
+    button.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    arrow.textContent = opening ? '▾' : '▸';
+    if (pagination) pagination.style.display = opening ? 'flex' : 'none';
 }
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -1864,30 +1899,29 @@ function exportFullCSV() {
 
             if (sourceLabel === "Unified") {
                 // Mapping per la tabella principale (Ivanti + Sat)
-                // Usiamo l'hostname Ivanti (cols[1]) o Sat (cols[5]) se Ivanti manca
-                let hostname = cols[1].innerText.trim();
+                // Usiamo l'hostname Ivanti o quello Satellite se Ivanti manca
+                let hostname = cols[1].innerText.trim() || cols[5].innerText.trim();
                 let os = cols[2].innerText.trim();
                 let ip = cols[3].innerText.trim();
-                let lastDate = cols[10].innerText.replace('⏳', '').trim(); // Last Checkin Sat
+                let lastDate = cols[11].innerText.replace('⏳', '').trim(); // Last Checkin Sat
                 let kernel = cols[8].innerText.replace('MISSING', '').trim();
                 let cvEnv = cols[9].innerText.replace('MISSING', '').trim();
 
-                // Note (sono nell'ultima colonna prima delle Actions, di solito cols[11])
-                const noteCell = cols[11];
+                const noteCell = cols[12];
                 let migDate = noteCell.querySelector('input') ? noteCell.querySelector('input').value : '';
                 let noteText = noteCell.querySelector('textarea') ? noteCell.querySelector('textarea').value : '';
 
                 rowData = [sourceLabel, hostname, os, ip, lastDate, kernel, cvEnv, migDate, noteText];
             } else {
                 // Mapping per la tabella Satellite Only (quella in fondo)
-                let hostname = cols[1].innerText.trim();
-                let os = cols[2].innerText.trim();
-                let ip = cols[3].innerText.trim();
-                let lastDate = cols[6].innerText.trim();
-                let kernel = cols[4].innerText.trim();
-                let cvEnv = cols[5].innerText.trim();
+                let hostname = cols[2].innerText.trim();
+                let os = cols[3].innerText.trim();
+                let ip = cols[4].innerText.trim();
+                let lastDate = cols[8].innerText.trim();
+                let kernel = cols[5].innerText.trim();
+                let cvEnv = cols[6].innerText.trim();
 
-                const noteCell = cols[7]; // Nella seconda tabella le note sono alla colonna 7
+                const noteCell = cols[9];
                 let migDate = noteCell.querySelector('input') ? noteCell.querySelector('input').value : '';
                 let noteText = noteCell.querySelector('textarea') ? noteCell.querySelector('textarea').value : '';
 
@@ -1907,14 +1941,7 @@ function exportFullCSV() {
     // Nota: assicurati che la seconda tabella abbia un ID o cercala per classe
     processTable("mainInventoryTable", "Unified");
 
-    // Per la seconda tabella, dato che non ha ID nel tuo codice originale,
-    // la cerchiamo come l'ultima tabella presente nella pagina
-    const allTables = document.querySelectorAll("table");
-    if (allTables.length >= 2) {
-        const lastTable = allTables[allTables.length - 1];
-        lastTable.id = "satelliteOnlyTable"; // Le assegniamo un ID al volo
-        processTable("satelliteOnlyTable", "SatOnly");
-    }
+    processTable("satelliteOnlyTable", "SatOnly");
 
     // --- DOWNLOAD DEL FILE ---
     const csvString = "\uFEFF" + csv.join("\n"); // Aggiunge BOM per far leggere correttamente le accentate a Excel
