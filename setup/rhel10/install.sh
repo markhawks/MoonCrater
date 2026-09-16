@@ -122,7 +122,11 @@ chmod 0644 /etc/httpd/conf.d/mooncrater.conf
 info 'Applying SELinux labels and permissions'
 semanage fcontext -a -t httpd_sys_content_t "${install_dir}/public(/.*)?" 2>/dev/null || \
     semanage fcontext -m -t httpd_sys_content_t "${install_dir}/public(/.*)?"
-restorecon -RF "$install_dir/public"
+semanage fcontext -a -t httpd_sys_content_t "${install_dir}/ivanti-import-csv(/.*)?" 2>/dev/null || \
+    semanage fcontext -m -t httpd_sys_content_t "${install_dir}/ivanti-import-csv(/.*)?"
+chown root:apache "$install_dir/ivanti-import-csv"
+chmod 0750 "$install_dir/ivanti-import-csv"
+restorecon -RF "$install_dir/public" "$install_dir/ivanti-import-csv"
 setsebool -P httpd_can_network_connect_db on
 
 info 'Applying database migrations and creating the administrator'

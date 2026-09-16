@@ -365,7 +365,7 @@ $migration_pct = $total_zabbix > 0
                         <?php if ($is_missing_sat): ?>
                             <span class="text-missing">N/A</span>
                         <?php else: ?>
-                            <?= $checkin_style ? '✕ ' : '' ?><?= htmlspecialchars($checkin_val ?: 'N/D') ?>
+                            <?= $checkin_style ? '✕ ' : '' ?><?= htmlspecialchars($checkin_val ?: 'N/A') ?>
                         <?php endif; ?>
                     </td>
 
@@ -506,7 +506,7 @@ async function saveEdit(btn) {
             row.querySelector('.td-kernel').textContent  = '⚙️ ' + (data.sat.kernel || 'N/A');
             row.querySelector('.td-cv').textContent      = data.sat.content_view_environment || 'N/A';
             row.querySelector('.td-loc').textContent     = '📍 ' + (data.sat.location || 'N/A');
-            row.querySelector('.td-checkin').textContent = data.sat.last_checkin || 'N/D';
+            row.querySelector('.td-checkin').textContent = data.sat.last_checkin || 'N/A';
             row.classList.remove('missing-satellite-row');
         } else if (new_hostname !== old_hostname) {
             // Nuovo hostname non trovato su Satellite

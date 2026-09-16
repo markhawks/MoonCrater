@@ -143,7 +143,7 @@ foreach ($satellite_hosts as $host) {
         <div class="card" style="border-left: 4px solid #f39c12;">
             <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">⏳ Stale Check-in</h3>
             <div style="font-size: 2.2em; font-weight: 800; color: #f39c12; margin-top: 10px;"><?= $stale_checkin_count ?></div>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with last check-in older than <?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?> days or N/D.</p>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with a last check-in older than <?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?> days or unavailable.</p>
         </div>
 
         <div class="card" style="border-left: 4px solid #2ecc71;">
@@ -234,11 +234,11 @@ foreach ($satellite_hosts as $host) {
                         // Check-in stale check
                         $lc = trim($host['last_checkin'] ?? '');
                         $is_stale   = false;
-                        $checkin_display = $lc ?: 'N/D';
+                        $checkin_display = $lc ?: 'N/A';
                         $checkin_style   = '';
                         if (empty($lc) || $lc === 'N/A' || $lc === 'N/D') {
                             $is_stale      = true;
-                            $checkin_display = 'N/D';
+                            $checkin_display = 'N/A';
                             $checkin_style   = 'color: #e74c3c; font-weight: bold;';
                         } else {
                             $lc_obj = DateTime::createFromFormat('Y-m-d', substr($lc, 0, 10));

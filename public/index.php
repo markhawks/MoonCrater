@@ -332,9 +332,9 @@ try {
             'ip'           => $inf['ip'] ?: ($inf['iv_ip'] ?: 'N/A'),
             'kernel'       => $inf['kernel'] ?: 'N/A',
             'location'     => $inf['location'] ?: 'N/A',
-            'last_checkin' => $inf['last_checkin'] ?: 'N/D',
+            'last_checkin' => $inf['last_checkin'] ?: 'N/A',
             'cv_env'       => $inf['content_view_environment'] ?: 'N/A',
-            'iv_scan_date' => $inf['iv_scan_date'] ?: 'N/D',
+            'iv_scan_date' => $inf['iv_scan_date'] ?: 'N/A',
         ];
     }
 } catch (Exception $e) {
@@ -448,222 +448,232 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.41' => [
+            'date' => '2026-09-16',
+            'changes' => [
+                'Standardized all user-facing portal text, messages, confirmations, and changelog entries in English',
+                'Replaced Italian N/D display fallbacks with N/A while preserving compatibility with legacy data',
+                'Aligned Diff Inventory and Migration Trends headers and Back to Dashboard buttons with the statistics pages',
+                'Expanded Migration Trends and its chart to use all available horizontal space',
+                'Corrected CSV directory group access and SELinux labels for fresh installations and updates',
+            ],
+        ],
         '1.40' => [
             'date' => '2026-09-16',
             'changes' => [
-                'Aggiunto report delle anomalie RHEL nella Diff Inventory View per host Ivanti only, Satellite only, check-in oltre 30 giorni e host dismessi ancora presenti in Satellite',
-                'Aggiunti totale host coinvolti, conteggi per anomalia, numerazione e ordinamento per tipo di anomalia',
-                'Aggiunti copia per email, export CSV ed export Excel formattato con riepilogo, filtri, intestazioni bloccate e colori',
-                'Reso modificabile da Settings il nome della Customer Identity, con persistenza nel database e ripristino del valore predefinito',
-                'Il grafico Migration Trends ora mostra tutto lo storico con larghezza dinamica e scorrimento orizzontale',
+                'Added a RHEL anomaly report to Diff Inventory View for Ivanti-only hosts, Satellite-only hosts, check-ins older than 30 days, and retired hosts still present in Satellite',
+                'Added unique affected-host totals, per-anomaly counters, row numbering, and anomaly-type sorting',
+                'Added email copy, CSV export, and formatted Excel export with a summary, filters, frozen headers, and colors',
+                'Made the Customer Identity name editable in Settings, with database persistence and default-value restoration',
+                'Migration Trends now displays the complete history with dynamic width and horizontal scrolling',
             ],
         ],
         '1.39' => [
             'date' => '2026-09-11',
             'changes' => [
-                'Aggiunta Diff Inventory View per confrontare gli snapshot CSV Ivanti e Satellite',
-                'Inventario diff suddiviso per RHEL, Oracle Linux, SUSE, Ubuntu, CentOS, Retired e Unknown con contatori release',
-                'Aggiunti totali Ivanti e Satellite, ordinamento colonne e conteggio anomalie per ogni riquadro',
-                'Evidenziati in giallo fluorescente i Last Check-in Satellite oltre 30 giorni rispetto allo snapshot',
-                'Usata automaticamente la data di estrazione nel filename quando il CSV Ivanti non contiene Scan Date',
-                'Unified Inventory View e Satellite Only rese collassabili dalla barra del titolo e chiuse di default',
-                'Ivanti Hostname visibile di default e valorizzato N/A nella vista Satellite Only',
-                'Aggiornati export CSV e persistenza della directory locale ivanti-import-csv durante gli update',
+                'Added Diff Inventory View to compare Ivanti and Satellite CSV snapshots',
+                'Split the diff inventory into RHEL, Oracle Linux, SUSE, Ubuntu, CentOS, Retired, and Unknown sections with release counters',
+                'Added Ivanti and Satellite totals, column sorting, and anomaly counts to every section',
+                'Highlighted Satellite check-ins older than 30 days from the snapshot date in fluorescent yellow',
+                'Automatically use the filename extraction date when the Ivanti CSV has no Scan Date column',
+                'Made Unified Inventory View and Satellite Only collapsible from their title bars and collapsed by default',
+                'Made Ivanti Hostname visible by default and displayed N/A in Satellite Only',
+                'Updated CSV exports and preserved the local ivanti-import-csv directory during updates',
             ],
         ],
         '1.38' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Creazione automatica dell account di sistema mooncrater-import durante installazione e aggiornamento RHEL 10',
-                'Creazione automatica della home, della directory SSH protetta e della inbox Satellite con proprietario e permessi corretti',
-                'Aggiunte indicazioni finali per installare l exporter sul Satellite e autorizzare la chiave pubblica generata',
-                'Documentato il funzionamento oneshot del servizio e il controllo della pianificazione tramite timer systemd',
-                'Riordinata la procedura completa MoonCrater, Satellite, autorizzazione SSH e test manuale',
+                'Automatically create the mooncrater-import system account during RHEL 10 installation and updates',
+                'Automatically create its home, protected SSH directory, and Satellite inbox with the correct ownership and permissions',
+                'Added final instructions for installing the Satellite exporter and authorizing its generated public key',
+                'Documented the oneshot service behavior and systemd timer schedule checks',
+                'Reorganized the complete MoonCrater, Satellite, SSH authorization, and manual testing procedure',
             ],
         ],
         '1.37' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Aggiunta elaborazione automatica della cartella satellite-import-csv ogni cinque minuti',
-                'Il CSV Satellite piu recente aggiorna inventario, diff e statistiche; i precedenti alimentano lo storico migrazioni',
-                'Aggiunti timestamp data, ora e minuti ai nomi CSV e alla linea temporale Migration Trends',
-                'Aggiunti import cronologico, rilevamento dei file gia elaborati, retry degli errori e lock contro esecuzioni simultanee',
-                'Aggiunto trasferimento SCP atomico tramite file temporaneo per evitare import parziali',
-                'Aggiunti account SSH dedicato, servizio e timer systemd per il server MoonCrater',
-                'Aggiunto installer generico per Satellite con richiesta del server target, chiave SSH dedicata e cron giornaliero alle 02:00',
-                'Aggiunti import storico da cartella, data snapshot ricavata dal filename e reset sicuro del grafico',
-                'Preservata la cartella degli export Satellite durante gli aggiornamenti applicativi',
+                'Added automatic processing of satellite-import-csv every five minutes',
+                'The newest Satellite CSV updates inventory, differences, and statistics while older files populate migration history',
+                'Added date, hour, and minute timestamps to CSV filenames and the Migration Trends timeline',
+                'Added chronological import, processed-file detection, retries, and locking against concurrent runs',
+                'Added atomic SCP delivery through a temporary file to prevent partial imports',
+                'Added a dedicated SSH account, service, and systemd timer for the MoonCrater server',
+                'Added a generic Satellite installer that requests the target server, creates a dedicated SSH key, and schedules a daily 02:00 cron job',
+                'Added historical folder import, filename-derived snapshot dates, and safe chart reset',
+                'Preserved the Satellite export directory during application updates',
             ],
         ],
         '1.36' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Aggiunta migrazione automatica dei percorsi legacy verso /opt/mooncrater e /etc/mooncrater',
-                'Aggiornati VirtualHost Apache, log e contesti SELinux durante la rinomina',
-                'Aggiunto rollback automatico della migrazione filesystem in caso di errore',
+                'Added automatic migration of legacy paths to /opt/mooncrater and /etc/mooncrater',
+                'Updated the Apache VirtualHost, logs, and SELinux contexts during the rename',
+                'Added automatic filesystem migration rollback on failure',
             ],
         ],
         '1.35' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Corretto il nome del prodotto da MoonCreater a MoonCrater',
-                'Rinominati logo, favicon, configurazione Apache e riferimenti del progetto',
-                'Mantenuta compatibilita automatica con installazioni e configurazioni precedenti',
+                'Corrected the product name from MoonCreater to MoonCrater',
+                'Renamed the logo, favicon, Apache configuration, and project references',
+                'Maintained automatic compatibility with previous installations and configurations',
             ],
         ],
         '1.34' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Estesa da 3 a 30 giorni la soglia di validita del last check-in Satellite',
-                'Allineati import corrente, storico, dashboard, filtri e pagine statistiche alla nuova soglia',
-                'Centralizzata la soglia Satellite per evitare differenze tra le diverse viste',
+                'Extended the valid Satellite last check-in threshold from 3 to 30 days',
+                'Aligned current import, history, dashboard, filters, and statistics pages with the new threshold',
+                'Centralized the Satellite threshold to prevent differences between views',
             ],
         ],
         '1.33' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Aggiunto import Ivanti transazionale da dashboard e CLI',
-                'Supportato il formato CSV Device Name, OS Name, Address e Last Hardware Scan Date',
-                'Gli aggiornamenti Ivanti preservano gli stati excluded e decommissioned',
-                'Aggiunta cronologia tecnica degli import Ivanti con conteggi inseriti, aggiornati e scartati',
+                'Added transactional Ivanti import from the dashboard and CLI',
+                'Added support for Device Name, OS Name, Address, and Last Hardware Scan Date CSV fields',
+                'Ivanti updates preserve excluded and decommissioned states',
+                'Added technical Ivanti import history with inserted, updated, and skipped counts',
             ],
         ],
         '1.32' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Aggiunto installer completo dedicato a Red Hat Enterprise Linux 10',
-                'Aggiunto aggiornamento sicuro con backup PostgreSQL, staging, controlli e rollback dei file',
-                'Rimossa la dipendenza da ripgrep per compatibilita con i repository standard RHEL 10',
-                'Corretto import Satellite senza colonna status con binding booleano PostgreSQL esplicito',
+                'Added a complete installer for Red Hat Enterprise Linux 10',
+                'Added safe updates with PostgreSQL backup, staging, checks, and file rollback',
+                'Removed the ripgrep dependency for compatibility with standard RHEL 10 repositories',
+                'Fixed Satellite imports without a status column by using explicit PostgreSQL boolean binding',
             ],
         ],
         '1.31' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Refactoring pre-release con public come unica document root web',
-                'Codice applicativo separato in app, comandi CLI in bin e asset in public/assets',
-                'Aggiunti schema iniziale, runner migrazioni e comando sicuro per creare il primo admin',
-                'Aggiunti configurazione Apache di esempio, installer e controlli preflight',
-                'Dati, test, documentazione e migrazioni rimossi dalla superficie pubblica',
-                'Versione applicativa centralizzata e documentazione open source aggiornata',
+                'Completed pre-release refactoring with public as the only web document root',
+                'Separated application code into app, CLI commands into bin, and assets into public/assets',
+                'Added the initial schema, migration runner, and secure first-administrator command',
+                'Added sample Apache configuration, installer, and preflight checks',
+                'Removed data, tests, documentation, and migrations from the public web surface',
+                'Centralized the application version and updated open-source documentation',
             ],
         ],
         '1.30' => [
             'date' => '2026-09-06',
             'changes' => [
-                'Infrastructure Hosts ridisegnata e ordinata con Satellite a sinistra e Capsule a destra',
-                'Etichette Satellite e Capsule estese e hostname infrastrutturali modificabili dagli amministratori',
-                'Riassegnazione sicura dei ruoli infrastrutturali usando host gia presenti nell inventario Satellite',
-                'Aggiunta gestione logo Customer in Settings con upload PNG, JPEG o WebP e ripristino Acme Corporation',
-                'Logo Customer salvato nella tabella app_settings e applicato a login e header del portale',
-                'Aggiunta data ultimo reset password alla gestione utenti',
-                'Corretta la rimozione utenti e la selezione delle azioni amministrative in Settings',
-                'Favicon MoonCrater aggiornata su tutte le pagine con cache busting',
-                'Versione software centralizzata e mostrata nel login',
-                'Corretti errori JavaScript preesistenti nelle funzioni di esportazione CSV',
+                'Redesigned Infrastructure Hosts with Satellite on the left and Capsule on the right',
+                'Expanded Satellite and Capsule labels and made infrastructure hostnames editable by administrators',
+                'Added safe infrastructure-role reassignment using hosts already present in Satellite inventory',
+                'Added Customer logo management in Settings with PNG, JPEG, or WebP upload and Acme Corporation restoration',
+                'Stored the Customer logo in app_settings and applied it to the login page and portal header',
+                'Added the last password reset date to user management',
+                'Fixed user removal and administrative action selection in Settings',
+                'Updated the MoonCrater favicon on every page with cache busting',
+                'Centralized the software version and displayed it on the login page',
+                'Fixed existing JavaScript errors in CSV export functions',
             ],
         ],
         '1.29' => [
             'date' => '2026-09-06',
             'changes' => [
-                'Aggiunti toggle Show/Hide per Ivanti Hostname e Ivanti Scan Date',
-                'Tutte le colonne Ivanti sono ora nascoste di default nella vista unificata',
-                'I dati Ivanti restano disponibili nei confronti e negli export CSV',
+                'Added Show/Hide toggles for Ivanti Hostname and Ivanti Scan Date',
+                'All Ivanti columns are now hidden by default in the unified view',
+                'Ivanti data remains available in comparisons and CSV exports',
             ],
         ],
         '1.28' => [
             'date' => '2026-09-06',
             'changes' => [
                 'Rebranding open source: MoonCrater - Infrastructure Control Plane Patching',
-                'Nuova icona MoonCrater derivata dall artwork originale e favicon applicativa',
-                'Rimossi dal portale i loghi e i riferimenti specifici di azienda e cliente',
-                'Cliente configurabile tramite CUSTOMER_NAME e CUSTOMER_LOGO con default Acme Corporation',
-                'Aggiunto monogramma cliente neutro utilizzato come asset predefinito',
+                'Added a new MoonCrater icon derived from the original artwork and an application favicon',
+                'Removed company- and customer-specific logos and references from the portal',
+                'Made the customer configurable through CUSTOMER_NAME and CUSTOMER_LOGO with Acme Corporation as default',
+                'Added a neutral customer monogram as the default asset',
             ],
         ],
         '1.27' => [
             'date'    => '2026-09-03',
             'changes' => [
-                'Nuova pagina Migration trends con andamento temporale RHEL 7, 8, 9 e 10',
-                'Grafico migrazioni con date degli import sull asse X, valori host visibili e margini corretti',
-                'Diff per minor release suddiviso in quattro tabelle RHEL visibili nella stessa pagina',
-                'Importazione CSV storici in modalita snapshot senza modificare l inventario operativo',
-                'Snapshot automatico delle versioni RHEL durante ogni nuovo import Satellite',
-                'Ricalcolo storico basato su last check-in entro 3 giorni dalla data di ciascun CSV',
-                'Corretto il conteggio RHEL 10: esclusi gli host unhealthy dagli andamenti di migrazione',
-                'Nuova gestione Satellite: excluded invariato, host presenti active o unhealthy, host assenti missing',
-                'Host infrastrutturali Satellite e Capsule preservati durante la riconciliazione degli import',
-                'Import Satellite reso transazionale con validazione CSV, hostname e separatore automatico',
-                'Hardening applicativo: sessioni sicure, timeout, CSRF e mutazioni riservate agli amministratori',
-                'Credenziali database spostate nella configurazione ambiente e messaggi di errore sanitizzati',
-                'Aggiunti audit log strutturati per login, import e operazioni amministrative',
-                'Protezione file sensibili, security header HTTP e rimozione di script ed export non sicuri',
-                'Ruoli admin e user applicati alla UI; impedita la cancellazione dell ultimo amministratore',
-                'Dashboard ottimizzata con paginazione, query esplicite e soglia Satellite uniforme a 3 giorni',
-                'Migliorata la sicurezza della gestione Zabbix e rimossa la generazione HTML dinamica non sicura',
-                'Login compatibile con i password manager tramite autocomplete username e current-password',
-                'Aggiunti test statici, test di dominio, migrazioni database e documentazione operativa',
+                'Added a Migration Trends page for RHEL 7, 8, 9, and 10 over time',
+                'Added migration charts with import dates on the X axis, visible host values, and corrected margins',
+                'Split minor-release differences into four RHEL tables visible on one page',
+                'Added historical CSV snapshot imports without changing operational inventory',
+                'Added automatic RHEL version snapshots during every Satellite import',
+                'Recalculated history from check-ins within three days of each CSV date',
+                'Corrected RHEL 10 counts by excluding unhealthy hosts from migration trends',
+                'Added Satellite reconciliation: excluded stays unchanged, present hosts become active or unhealthy, and absent hosts become missing',
+                'Preserved Satellite and Capsule infrastructure hosts during import reconciliation',
+                'Made Satellite import transactional with CSV, hostname, and delimiter validation',
+                'Hardened sessions, timeouts, CSRF protection, and administrator-only mutations',
+                'Moved database credentials to environment configuration and sanitized error messages',
+                'Added structured audit logs for login, import, and administrative operations',
+                'Protected sensitive files, added HTTP security headers, and removed unsafe scripts and exports',
+                'Applied admin and user roles to the UI and prevented deletion of the last administrator',
+                'Optimized the dashboard with pagination, explicit queries, and a uniform three-day Satellite threshold',
+                'Improved Zabbix management security and removed unsafe dynamic HTML generation',
+                'Made login compatible with password managers through username and current-password autocomplete',
+                'Added static checks, domain tests, database migrations, and operational documentation',
             ],
         ],
         '1.26' => [
             'date'    => '2026-07-04',
             'changes' => [
-                'Aggiunto statistics10.php — statistiche dedicate RHEL 10 (Coughlan)',
-                'Aggiunto link RHEL 10 stats nella card Statistics & Views',
-                'Aggiornate icone scala cromatica: 🔴 RHEL7 → 🟠 RHEL8 → 🟢 RHEL9 → 🔵 RHEL10',
-                'kernel_stats.php: header allineato alle altre pagine stats con Back to Dashboard',
-                'kernel_stats.php: aggiunta card distribuzione OS major con pill colorate per versione',
-                'kernel_stats.php: aggiunto filtro role=host per escludere Satellite e Capsule',
-                'statistics_zabbix.php: edit/delete/add hostname inline senza reload pagina',
-                'statistics_zabbix.php: colonna Zabbix Ver. con edit inline e badge verde/rosso',
-                'statistics_zabbix.php: KPI card migrazione Zabbix 7 con barra progresso e %',
-                'statistics_zabbix.php: pagina full-width, IP nascosto di default, kernel e CV sempre visibili',
-                'Gestione utenti settings.php: aggiunta colonna role (admin/user) alla tabella users',
-                'export_users_sql.php: fix TypeError pg_escape_string() — compatibile PostgreSQL 16 e 18',
-                'login.php: refactoring CSS modulare (base.css + components.css + style-login.css)',
-                'Infrastructure card: rimosso indicatore Unhealthy per SAT (non gestisce se stesso)',
-                'Infrastructure card: Location e Last check-in editabili inline direttamente dalla dashboard',
+                'Added statistics10.php with dedicated RHEL 10 (Coughlan) statistics',
+                'Added the RHEL 10 statistics link to Statistics & Views',
+                'Updated the color-scale icons: 🔴 RHEL7 → 🟠 RHEL8 → 🟢 RHEL9 → 🔵 RHEL10',
+                'Aligned the kernel_stats.php header with other statistics pages and added Back to Dashboard',
+                'Added an OS major distribution card with colored version pills to kernel_stats.php',
+                'Added a role=host filter to kernel_stats.php to exclude Satellite and Capsule',
+                'Added inline hostname editing, deletion, and creation to statistics_zabbix.php without page reloads',
+                'Added an inline-editable Zabbix Version column with green and red badges',
+                'Added a Zabbix 7 migration KPI card with a progress bar and percentage',
+                'Made statistics_zabbix.php full width, hid IP by default, and kept kernel and CV visible',
+                'Added the admin/user role column to the user-management table in Settings',
+                'Fixed the pg_escape_string() TypeError for PostgreSQL 16 and 18 compatibility',
+                'Refactored login.php to use modular CSS',
+                'Removed the Satellite Unhealthy indicator because Satellite does not manage itself',
+                'Made infrastructure Location and Last check-in editable inline from the dashboard',
             ],
         ],
         '1.24' => [
             'date'    => '2026-06-14',
             'changes' => [
-                'Redesign completo header del precedente branding e badge versione con changelog',
-                'Redesign card statistiche inventario: layout flat, colori semantici, border-top accent',
-                'Pannello centrale riorganizzato in 5 card su unica riga (Agent Health, Data Ingestion, Stats, Search, Maintenance)',
-                'Agent Health & Anomalies: unificazione contatori Unhealthy + IP Anomalies con breakdown per tabella',
-                'Consolidamento colonne Action: rimosse duplicazioni Mask Out / Decommission, unica azione ⊘ Exclude / ↩ Re-include',
-                'Host esclusi: nascosti di default con badge contatore e bottone show/hide',
-                'Filtri Unhealthy/Healthy: corretta esclusione host Missing dalle due viste',
-                'Last check-in anomalo evidenziato con ✕ rossa e sfondo rosso in entrambe le tabelle',
-                'Satellite Only: aggiunto filtro unhealthy/healthy, fix bug colonna Location, normalizzazione N/A → N/D',
-                'Infrastruttura Satellite/Capsule: gestione dedicata tramite colonna role in inventory_satellite e inventory_ivanti',
-                'Card Satellite Active: aggiunto contatore +N per host infrastrutturali (viola)',
-                'Fix contatore Unhealthy: esclusi host fantasma (os vuoto) e host Missing tramite INNER JOIN',
-                'Fix duplicazione host esclusi in tabella Satellite Only tramite matched_sat_keys',
-                'Esclusioni lette da inventory_ivanti.status invece di tabella host_exclusions inesistente',
+                'Completely redesigned the branded header and version badge with changelog',
+                'Redesigned inventory statistics cards with a flat layout, semantic colors, and accent borders',
+                'Reorganized the central panel into five cards on one row: Agent Health, Data Ingestion, Stats, Search, and Maintenance',
+                'Combined Unhealthy and IP Anomaly counters with per-table breakdowns in Agent Health & Anomalies',
+                'Consolidated duplicate Mask Out and Decommission actions into Exclude and Re-include',
+                'Hid excluded hosts by default with a counter badge and Show/Hide button',
+                'Corrected Unhealthy and Healthy filters to exclude Missing hosts',
+                'Highlighted anomalous last check-ins with a red cross and background in both tables',
+                'Added unhealthy/healthy filtering to Satellite Only, fixed Location, and standardized unavailable values',
+                'Added dedicated Satellite and Capsule infrastructure handling through inventory role columns',
+                'Added a purple +N infrastructure-host count to the Satellite Active card',
+                'Fixed Unhealthy counts by excluding empty-OS phantom hosts and Missing hosts',
+                'Fixed duplicate excluded hosts in Satellite Only through matched_sat_keys',
+                'Read exclusions from inventory_ivanti.status instead of the nonexistent host_exclusions table',
             ],
         ],
         '1.23' => [
             'date'    => '2026-05-26',
             'changes' => [
-                'Layout full-width ripristinato per Unified Inventory View',
-                'Import Satellite CSV: supporto separatore automatico ; e ,',
-                'Filtro Location dinamico da DB',
-                'Colonna toggle show/hide per Ivanti OS, Ivanti IP, Sat IP, Kernel',
-                'Ordinamento kernel con logica versioning numerica',
-                'Note patching con salvataggio AJAX e indicatore visivo note popolate',
+                'Restored the full-width Unified Inventory View layout',
+                'Added automatic semicolon and comma delimiter support to Satellite CSV import',
+                'Added a dynamic database-driven Location filter',
+                'Added Show/Hide column toggles for Ivanti OS, Ivanti IP, Satellite IP, and Kernel',
+                'Added numeric version-aware kernel sorting',
+                'Added patching notes with AJAX saving and a visual indicator for populated notes',
             ],
         ],
         '1.22' => [
             'date'    => '2026-05-10',
             'changes' => [
-                'Aggiunta tabella Satellite Only',
-                'Contatori dinamici: Ivanti Active, Satellite Active, Missing, Coverage, Satellite Only',
-                'OS Distribution per Ivanti e Satellite',
-                'Filtri: hostname search, missing status, OS major',
-                'Export CSV: Unified view e Global (tutte le tabelle)',
-                'Backup DB con snapshot tabelle bak_*',
+                'Added the Satellite Only table',
+                'Added dynamic Ivanti Active, Satellite Active, Missing, Coverage, and Satellite Only counters',
+                'Added OS Distribution for Ivanti and Satellite',
+                'Added hostname, missing-status, and OS-major filters',
+                'Added Unified View and Global CSV exports',
+                'Added database backups with bak_* table snapshots',
             ],
         ],
     ];
@@ -987,7 +997,7 @@ if (file_exists('import_satellite.php')) {
                               style="color: #abb2b9; cursor: pointer;"
                               title="Click to edit"
                               onclick="infraEditStart('lc', '<?= $safe_id ?>')">
-                            🕐 <?= htmlspecialchars($inf['last_checkin'] ?: 'N/D') ?>
+                            🕐 <?= htmlspecialchars($inf['last_checkin'] ?: 'N/A') ?>
                         </span>
                         <span id="lc-edit-<?= $safe_id ?>" style="display:none; align-items:center; gap:4px;">
                             <input id="lc-input-<?= $safe_id ?>"
@@ -1021,7 +1031,7 @@ if (file_exists('import_satellite.php')) {
             <div style="flex: 1;">
                 <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 3px;">Unhealthy hosts</div>
                 <div style="font-size: 28px; font-weight: 600; color: #e74c3c; line-height: 1;"><?= $total_unhealthy ?></div>
-                <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">check-in &gt;<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d, N/D or missing</div>
+                <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">check-in &gt;<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d, unavailable, or missing</div>
             </div>
             <div style="width: 1px; background: rgba(255,255,255,0.08); align-self: stretch;"></div>
             <div style="flex: 1;">
@@ -1388,7 +1398,7 @@ if (file_exists('import_satellite.php')) {
                 }
 
                 $checkin_class = '';
-                $checkin_display = 'N/D';
+                $checkin_display = 'N/A';
                 if ($sat && !empty($sat['last_checkin']) && $sat['last_checkin'] !== 'N/A' && $sat['last_checkin'] !== 'N/D') {
                     $checkin_display = $sat['last_checkin'];
                     $checkin_date_part = substr($sat['last_checkin'], 0, 10);
@@ -1400,7 +1410,7 @@ if (file_exists('import_satellite.php')) {
                     }
                 } elseif ($sat) {
                     // Host presente in Satellite ma last_checkin assente o N/A → anomalia
-                    $checkin_display = 'N/D';
+                    $checkin_display = 'N/A';
                     $checkin_class = 'warn-text';
                 }
                 // Se $sat è null (missing) checkin_display rimane 'N/D' e checkin_class rimane ''
@@ -1431,7 +1441,7 @@ if (file_exists('import_satellite.php')) {
                     <td class="col-iv-hostname"><?= htmlspecialchars($row['hostname'] ?? '') ?></td>
                     <td class="col-iv-os col-hidden"><?= htmlspecialchars($row['os'] ?? '') ?></td>
                     <td class="col-iv-ip col-hidden"><?= htmlspecialchars($row['ip'] ?? '') ?></td>
-                    <td class="col-date col-iv-scan col-hidden <?= $date_class ?>"><?= htmlspecialchars($scan_date_raw ?: 'N/D') ?> <?= $date_class ? '⚠️' : '' ?></td>
+                    <td class="col-date col-iv-scan col-hidden <?= $date_class ?>"><?= htmlspecialchars($scan_date_raw ?: 'N/A') ?> <?= $date_class ? '⚠️' : '' ?></td>
 
                     <?php if ($sat): ?>
                         <td><?= htmlspecialchars($sat['hostname'] ?? '') ?></td>
@@ -1549,7 +1559,7 @@ if (file_exists('import_satellite.php')) {
 
                     // --- Calcolo stale checkin per questa riga ---
                     $s_stale_checkin = false;
-                    $s_checkin_display = 'N/D';
+                    $s_checkin_display = 'N/A';
                     $s_checkin_raw = $sat_data['last_checkin'] ?? '';
                     if (!empty($s_checkin_raw) && $s_checkin_raw !== 'N/A' && $s_checkin_raw !== 'N/D') {
                         $s_checkin_display = $s_checkin_raw;
@@ -1560,7 +1570,7 @@ if (file_exists('import_satellite.php')) {
                     } else {
                         // N/A o vuoto = anomalia
                         $s_stale_checkin = true;
-                        $s_checkin_display = 'N/D';
+                        $s_checkin_display = 'N/A';
                     }
 
                     // --- Filtri ---
@@ -1662,7 +1672,7 @@ function sortTabellaKernel() {
     const kernelColumnIndex = headers.findIndex(th => th.innerText.includes("Kernel"));
 
     if (kernelColumnIndex === -1) {
-        alert("Errore: Colonna Kernel non identificata.");
+        alert("Error: Kernel column not found.");
         return;
     }
 
@@ -1832,7 +1842,7 @@ function saveNote(hostname, value, type, safeId) {
             }
         }
     })
-    .catch(error => console.error('Errore nel salvataggio della nota:', error));
+    .catch(error => console.error('Error saving note:', error));
 }
 </script>
 
@@ -2011,7 +2021,7 @@ async function infraSave(field, id, hostname) {
         if (field === 'loc') {
             viewSpan.textContent = '📍 ' + (value || 'N/A');
         } else {
-            viewSpan.textContent = '🕐 ' + (value || 'N/D');
+            viewSpan.textContent = '🕐 ' + (value || 'N/A');
         }
         infraCancel(field, id);
 

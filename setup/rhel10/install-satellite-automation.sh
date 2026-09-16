@@ -14,8 +14,10 @@ fi
 home_dir="$(getent passwd "$import_user" | cut -d: -f6)"
 [[ -n $home_dir && -d $home_dir ]] || { echo "Home directory unavailable for $import_user." >&2; exit 1; }
 install -d -m 0700 -o "$import_user" -g "$import_user" "$home_dir/.ssh"
-install -d -m 0750 -o "$import_user" -g "$import_user" "$install_dir/satellite-import-csv"
+install -d -m 0750 -o "$import_user" -g apache "$install_dir/satellite-import-csv"
 install -d -m 0750 "$install_dir/var"
+semanage fcontext -a -t httpd_sys_content_t "${install_dir}/satellite-import-csv(/.*)?" 2>/dev/null || \
+    semanage fcontext -m -t httpd_sys_content_t "${install_dir}/satellite-import-csv(/.*)?"
 restorecon -RF "$home_dir/.ssh" "$install_dir/satellite-import-csv" >/dev/null 2>&1 || true
 
 sed "s|/opt/mooncrater|${install_dir}|g" \

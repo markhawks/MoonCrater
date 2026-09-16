@@ -217,7 +217,7 @@ ksort($minor_distribution);
                                         </span>
                                     </td>
                                     <td style="<?= $checkin_class ?>" class="nowrap-cell">
-                                        <?= htmlspecialchars($sat['last_checkin'] ?? 'N/D') ?>
+                                        <?= htmlspecialchars($sat['last_checkin'] ?? 'N/A') ?>
                                         <?= !empty($checkin_class) ? '⏳' : '' ?>
                                     </td>
                                 </tr>

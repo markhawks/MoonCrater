@@ -181,7 +181,7 @@ function diff_inventory_rhel_anomaly(
     if (!$reasons) return null;
 
     return [
-        'hostname' => (string) (($ivanti['hostname'] ?? null) ?: ($satellite['hostname'] ?? 'N/D')),
+        'hostname' => (string) (($ivanti['hostname'] ?? null) ?: ($satellite['hostname'] ?? 'N/A')),
         'reasons' => array_values(array_unique($reasons)),
         'actions' => array_values(array_unique($actions)),
     ];

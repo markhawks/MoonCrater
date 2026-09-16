@@ -2,6 +2,20 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.41] - 2026-09-16
+
+### Fixed
+
+- Standardized all user-facing portal text, messages, confirmations, and embedded changelog entries
+  in clear English; replaced Italian `N/D` display fallbacks with `N/A` while retaining legacy-data
+  compatibility.
+- Aligned the Diff Inventory and Migration Trends headers and Back to Dashboard buttons with the
+  statistics pages.
+- Expanded Migration Trends to the full browser width and made the chart fill all available
+  horizontal space while preserving horizontal scrolling for long histories.
+- Corrected Satellite and Ivanti CSV directory ownership, group access, and SELinux labels so PHP
+  can read local snapshots after fresh installations and updates.
+
 ## [1.40] - 2026-09-16
 
 ### Added
