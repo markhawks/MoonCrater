@@ -2,6 +2,25 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.40] - 2026-09-16
+
+### Added
+
+- RHEL anomaly report at the bottom of Diff Inventory View, covering Ivanti-only hosts,
+  Satellite-only hosts, Satellite check-ins older than 30 days, and hosts retired in Ivanti but
+  still present in Satellite.
+- Unique affected-host total, per-anomaly counters, sequential row numbering, and anomaly-type
+  sorting for the verification report.
+- Email-friendly table copy, CSV export, and styled Excel-compatible export with summary and detail
+  worksheets, filters, frozen headers, and anomaly-specific colors.
+- Editable Customer Identity name in Settings, stored in application settings and applied to the
+  login page and portal header, with validation, auditing, and default-name restoration.
+
+### Changed
+
+- Migration Trends chart now expands dynamically to preserve readable spacing across the complete
+  snapshot history and provides horizontal scrolling instead of compressing older points.
+
 ## [1.39] - 2026-09-11
 
 ### Added

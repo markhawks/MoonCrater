@@ -40,6 +40,25 @@ if (diff_inventory_date_from_filename('export_ivanti-10092026.csv')?->format('d/
 if (!diff_inventory_checkin_is_stale('2026-08-03 23:59:59 UTC', new DateTimeImmutable('2026-09-03'))) exit(1);
 if (diff_inventory_checkin_is_stale('2026-08-05 00:00:00 UTC', new DateTimeImmutable('2026-09-03'))) exit(1);
 if (diff_inventory_checkin_is_stale('N/A', new DateTimeImmutable('2026-09-03'))) exit(1);
+$anomalyReference = new DateTimeImmutable('2026-09-03');
+$ivantiOnlyAnomaly = diff_inventory_rhel_anomaly(
+    ['hostname' => 'host1.example.test', 'os' => 'RHEL 8.10'],
+    null,
+    $anomalyReference
+);
+if (!in_array('Ivanti only', $ivantiOnlyAnomaly['reasons'] ?? [], true)) exit(1);
+$nonRhelAnomaly = diff_inventory_rhel_anomaly(
+    ['hostname' => 'host2.example.test', 'os' => 'Ubuntu 22.04'],
+    null,
+    $anomalyReference
+);
+if ($nonRhelAnomaly !== null) exit(1);
+$retiredSatelliteAnomaly = diff_inventory_rhel_anomaly(
+    ['hostname' => 'host3.example.test', 'os' => 'DISMESSA'],
+    ['hostname' => 'host3.example.test', 'os' => 'RHEL 8.10', 'last_checkin' => '2026-09-02 12:00:00 UTC'],
+    $anomalyReference
+);
+if (!in_array('Retired in Ivanti but still present in Satellite', $retiredSatelliteAnomaly['reasons'] ?? [], true)) exit(1);
 $csvDirectory = sys_get_temp_dir() . '/mooncrater-diff-' . bin2hex(random_bytes(6));
 if (!mkdir($csvDirectory) || !touch($csvDirectory . '/export-26052026.csv') || !touch($csvDirectory . '/export-03092026.csv')) exit(1);
 if (basename((string) diff_inventory_latest_csv($csvDirectory, 'export')) !== 'export-03092026.csv') exit(1);

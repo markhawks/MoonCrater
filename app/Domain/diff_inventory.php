@@ -150,6 +150,43 @@ function diff_inventory_checkin_is_stale(
     return $checkin < $reference->modify("-{$maxAgeDays} days");
 }
 
+function diff_inventory_rhel_anomaly(
+    ?array $ivanti,
+    ?array $satellite,
+    ?DateTimeImmutable $snapshotDate
+): ?array {
+    $ivantiFamily = diff_inventory_os((string) ($ivanti['os'] ?? ''))['family'];
+    $satelliteFamily = diff_inventory_os((string) ($satellite['os'] ?? ''))['family'];
+    $isRhel = $ivantiFamily === 'Red Hat Enterprise Linux' || $satelliteFamily === 'Red Hat Enterprise Linux';
+    if (!$isRhel) return null;
+
+    $reasons = [];
+    $actions = [];
+    if ($ivanti && !$satellite) {
+        $reasons[] = 'Ivanti only';
+        $actions[] = 'Verify shutdown/decommissioning and Satellite registration';
+    }
+    if ($satellite && !$ivanti) {
+        $reasons[] = 'Satellite only';
+        $actions[] = 'Verify Ivanti inventory inclusion or remove the invalid Satellite host';
+    }
+    if ($satellite && $snapshotDate && diff_inventory_checkin_is_stale($satellite['last_checkin'] ?? null, $snapshotDate)) {
+        $reasons[] = 'Satellite check-in older than 30 days';
+        $actions[] = 'Verify server power and agent; clean Satellite if decommissioned';
+    }
+    if ($ivantiFamily === 'Retired' && $satelliteFamily === 'Red Hat Enterprise Linux') {
+        $reasons[] = 'Retired in Ivanti but still present in Satellite';
+        $actions[] = 'Confirm decommissioning, power off, and remove the Satellite host';
+    }
+    if (!$reasons) return null;
+
+    return [
+        'hostname' => (string) (($ivanti['hostname'] ?? null) ?: ($satellite['hostname'] ?? 'N/D')),
+        'reasons' => array_values(array_unique($reasons)),
+        'actions' => array_values(array_unique($actions)),
+    ];
+}
+
 function diff_inventory_latest_csv(string $directory, string $requiredNamePart): ?string
 {
     $files = glob(rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '*.csv') ?: [];

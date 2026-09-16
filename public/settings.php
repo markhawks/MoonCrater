@@ -6,6 +6,32 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') require_csrf();
 $message      = null;
 $message_type = 'ok';
 
+// --- AZIONE: Aggiorna o ripristina nome Customer ---
+if (($_POST['action'] ?? '') === 'update_customer_name') {
+    $new_customer_name = trim((string) ($_POST['customer_name'] ?? ''));
+    if ($new_customer_name === '') {
+        $message = 'Customer name is required.';
+        $message_type = 'error';
+    } elseif (mb_strlen($new_customer_name) > 100 || preg_match('/[\x00-\x1F\x7F]/u', $new_customer_name)) {
+        $message = 'Customer name must not exceed 100 characters and cannot contain control characters.';
+        $message_type = 'error';
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO app_settings (setting_key, setting_value, updated_at) VALUES ('customer_name', ?, CURRENT_TIMESTAMP) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = CURRENT_TIMESTAMP");
+        $stmt->execute([$new_customer_name]);
+        $customerName = $new_customer_name;
+        audit_event('settings.customer_name.update', ['customer_name' => $new_customer_name]);
+        $message = 'Customer name updated successfully.';
+    }
+}
+
+if (($_POST['action'] ?? '') === 'reset_customer_name') {
+    $stmt = $pdo->prepare("INSERT INTO app_settings (setting_key, setting_value, updated_at) VALUES ('customer_name', 'Acme Corporation', CURRENT_TIMESTAMP) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = CURRENT_TIMESTAMP");
+    $stmt->execute();
+    $customerName = 'Acme Corporation';
+    audit_event('settings.customer_name.reset');
+    $message = 'Default customer name restored.';
+}
+
 // --- AZIONE: Aggiorna o ripristina logo Customer ---
 if (($_POST['action'] ?? '') === 'upload_customer_logo') {
     $upload = $_FILES['customer_logo'] ?? null;
@@ -176,7 +202,15 @@ $users = $pdo->query("SELECT id, username, role, created_at, last_password_reset
                 <img src="<?= htmlspecialchars($customerLogo, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?>">
             </div>
             <div class="customer-logo-controls">
-                <div style="font-size:13px;color:var(--text-primary);font-weight:700;"><?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?></div>
+                <form method="POST" class="customer-name-form">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                    <input type="hidden" name="action" value="update_customer_name">
+                    <label for="customer-name">Customer name</label>
+                    <div class="customer-name-actions">
+                        <input id="customer-name" type="text" name="customer_name" value="<?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?>" maxlength="100" required>
+                        <button type="submit" class="btn-add-user">Save name</button>
+                    </div>
+                </form>
                 <div class="customer-logo-help">Upload a PNG, JPEG or WebP image. Maximum size: 2 MB.</div>
                 <div class="customer-logo-actions">
                     <form method="POST" enctype="multipart/form-data" class="customer-logo-upload-form">
@@ -189,6 +223,11 @@ $users = $pdo->query("SELECT id, username, role, created_at, last_password_reset
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                         <input type="hidden" name="action" value="reset_customer_logo">
                         <button type="submit" class="btn-action btn-action-reset">↺ Restore default</button>
+                    </form>
+                    <form method="POST" onsubmit="return confirm('Restore the default customer name Acme Corporation?')">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                        <input type="hidden" name="action" value="reset_customer_name">
+                        <button type="submit" class="btn-action btn-action-reset">↺ Restore default name</button>
                     </form>
                 </div>
             </div>

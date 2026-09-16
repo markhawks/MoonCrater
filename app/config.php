@@ -52,7 +52,12 @@ try {
 
 if (!defined('APP_MIGRATING')) {
     try {
-        $storedCustomerLogo = $pdo->query("SELECT setting_value FROM app_settings WHERE setting_key = 'customer_logo_data'")->fetchColumn();
+        $storedSettings = $pdo->query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('customer_logo_data', 'customer_name')")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $storedCustomerName = $storedSettings['customer_name'] ?? null;
+        if (is_string($storedCustomerName) && trim($storedCustomerName) !== '' && mb_strlen($storedCustomerName) <= 100) {
+            $customerName = trim($storedCustomerName);
+        }
+        $storedCustomerLogo = $storedSettings['customer_logo_data'] ?? null;
         if ($storedCustomerLogo === 'image/customer-default.svg') $storedCustomerLogo = 'assets/img/customer-default.svg';
         if (is_string($storedCustomerLogo) && ($storedCustomerLogo === 'assets/img/customer-default.svg' || preg_match('#^data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$#', $storedCustomerLogo))) {
             $customerLogo = $storedCustomerLogo;

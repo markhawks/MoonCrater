@@ -448,6 +448,16 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.40' => [
+            'date' => '2026-09-16',
+            'changes' => [
+                'Aggiunto report delle anomalie RHEL nella Diff Inventory View per host Ivanti only, Satellite only, check-in oltre 30 giorni e host dismessi ancora presenti in Satellite',
+                'Aggiunti totale host coinvolti, conteggi per anomalia, numerazione e ordinamento per tipo di anomalia',
+                'Aggiunti copia per email, export CSV ed export Excel formattato con riepilogo, filtri, intestazioni bloccate e colori',
+                'Reso modificabile da Settings il nome della Customer Identity, con persistenza nel database e ripristino del valore predefinito',
+                'Il grafico Migration Trends ora mostra tutto lo storico con larghezza dinamica e scorrimento orizzontale',
+            ],
+        ],
         '1.39' => [
             'date' => '2026-09-11',
             'changes' => [

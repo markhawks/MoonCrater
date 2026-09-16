@@ -24,7 +24,7 @@ MoonCrater provides a unified operational view of Linux patching inventories. It
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.39**.
+Current application version: **1.40**.
 
 ## Features
 
@@ -34,6 +34,7 @@ Current application version: **1.39**.
 - RHEL 7, 8, 9, and 10 inventory and kernel statistics.
 - Historical Satellite imports with migration charts and per-release differences.
 - Dedicated Ivanti/Satellite Diff Inventory View grouped by Linux family and release.
+- RHEL anomaly verification report with email copy, CSV, and styled Excel-compatible export.
 - Zabbix inventory and migration progress.
 - Patching notes and planned migration dates.
 - Administrator and read-only user roles.
