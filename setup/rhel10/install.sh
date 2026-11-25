@@ -53,17 +53,20 @@ else
 fi
 [[ ${#admin_password} -ge 8 ]] || die 'The administrator password must contain at least 8 characters.'
 
-info 'Installing RHEL packages'
-dnf install -y \
-    httpd php php-cli php-pgsql php-mbstring \
-    postgresql postgresql-server policycoreutils-python-utils \
-    firewalld git openssh-server
+if [[ ${MOONCRATER_RPM_SETUP:-no} != yes ]]; then
+    info 'Installing RHEL packages'
+    dnf install -y \
+        httpd php php-cli php-pgsql php-mbstring \
+        postgresql postgresql-server policycoreutils-python-utils \
+        firewalld git openssh-server
+fi
 
 info 'Installing application files'
 if [[ $source_dir != "$install_dir" ]]; then
     MOONCRATER_INSTALL_DIR="$install_dir" "$source_dir/setup/install.sh"
 else
-    install -d -m 0750 /etc/mooncrater "$install_dir/var/backups" "$install_dir/var/uploads"
+    install -d -m 0750 /etc/mooncrater "$install_dir/var/backups" "$install_dir/var/uploads" \
+        "$install_dir/external-import-csv"
 fi
 
 info 'Initializing and starting PostgreSQL'

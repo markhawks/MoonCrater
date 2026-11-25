@@ -6,7 +6,23 @@ It is intentionally separate from the generic file-copy installer in `setup/inst
 The installer accepts RHEL 10.x, including 10.2 and 10.3. RHEL 10.3 is the baseline for
 development and production. The target server needs access to its enabled RHEL package repositories.
 
-Run it from a cloned MoonCrater repository:
+## Fresh installation from RPM
+
+Download the unsigned RPM from the [MoonCrater 1.50 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.50).
+On RHEL 10.3 with package repositories enabled:
+
+```bash
+sudo dnf install ./mooncrater-1.50-1.el10.noarch.rpm
+sudo mooncrater-setup
+```
+
+DNF installs the dependencies. Run `mooncrater-setup` for initial configuration on a fresh
+server. Keep locally built packages in `dist/rpm/`. The RPM spec and setup entry point are in
+[`setup/rpm/`](../rpm/).
+
+## Fresh installation from Git
+
+Run the installer from a cloned MoonCrater repository:
 
 ```bash
 sudo ./setup/rhel10/install.sh

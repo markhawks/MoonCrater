@@ -11,3 +11,4 @@ zabbix-import-csv/*.csv
 .DS_Store
 SESSION_HANDOFF.md
 ivanti-import-csv/*.csv
+/dist/rpm/

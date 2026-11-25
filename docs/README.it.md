@@ -40,6 +40,21 @@ Vedere `docs/ARCHITECTURE.md` per i confini e le responsabilità delle directory
 - Gestione del logo Customer da Settings, con ripristino dell'icona predefinita.
 - Assegnazione amministrativa degli hostname ai ruoli Satellite e Capsule.
 
+## Installazione RPM su RHEL 10.3
+
+Per una nuova istanza, scaricare `mooncrater-1.50-1.el10.noarch.rpm` dalla
+[release MoonCrater 1.50](https://github.com/markhawks/MoonCrater/releases/tag/v1.50).
+Con i repository RHEL abilitati, eseguire:
+
+```bash
+sudo dnf install ./mooncrater-1.50-1.el10.noarch.rpm
+sudo mooncrater-setup
+```
+
+Il setup chiede le password del database e dell’amministratore e configura il portale
+in `/opt/mooncrater`. L’RPM è privo di firma. Per le installazioni gestite tramite Git,
+usare l’updater esistente. Vedere la [guida RHEL](../setup/rhel10/README.md).
+
 ## Requisiti e configurazione
 
 Sono richiesti Apache HTTPD, PHP con PDO PostgreSQL e PostgreSQL. In produzione

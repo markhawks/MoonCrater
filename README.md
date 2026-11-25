@@ -70,6 +70,21 @@ No container runtime is required.
 
 ## Installation
 
+### RPM on RHEL 10.3
+
+For a fresh installation, download `mooncrater-1.50-1.el10.noarch.rpm` from the
+[MoonCrater 1.50 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.50).
+With the RHEL package repositories enabled, run:
+
+```bash
+sudo dnf install ./mooncrater-1.50-1.el10.noarch.rpm
+sudo mooncrater-setup
+```
+
+The setup command prompts for the database and administrator passwords and configures the portal
+under `/opt/mooncrater`. The RPM is unsigned. Use the existing updater for installations managed by
+the Git-based installer. See the [RHEL installation guide](setup/rhel10/README.md) for details.
+
 Clone the repository and run the installer as root:
 
 ```bash

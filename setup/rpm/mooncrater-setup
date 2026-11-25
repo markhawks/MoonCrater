@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+if [[ -e /etc/mooncrater/apache-env.conf || -e /etc/mooncreater/apache-env.conf ]]; then
+    echo 'MoonCrater is already configured. This command is for fresh installations.' >&2
+    exit 1
+fi
+
+export MOONCRATER_INSTALL_DIR=/opt/mooncrater
+export MOONCRATER_RPM_SETUP=yes
+exec /opt/mooncrater/setup/rhel10/install.sh
