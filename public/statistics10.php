@@ -18,7 +18,7 @@ try {
             OR os ILIKE '%Red Hat Enterprise Linux 10%'
           )
           AND role = 'host'
-          AND status = 'active'
+          AND status IN ('active', 'unhealthy')
         ORDER BY
             CASE
                 WHEN regexp_replace(os, '^[^0-9]*10\.([0-9]+).*$', '\1') ~ '^[0-9]+$'
@@ -37,7 +37,12 @@ try {
 $total_rhel10 = count($satellite_hosts);
 
 $missing_ip_count = 0;
+$missing_cv_env_count = 0;
 foreach ($satellite_hosts as $host) {
+    $cvEnv = strtoupper(trim($host['content_view_environment'] ?? ''));
+    if (in_array($cvEnv, ['', 'N/A', 'N/D', 'NULL'], true)) {
+        $missing_cv_env_count++;
+    }
     $ip = trim($host['ip'] ?? '');
     if (empty($ip) || $ip === 'N/A' || $ip === 'N/D') {
         $missing_ip_count++;
@@ -136,8 +141,12 @@ foreach ($satellite_hosts as $host) {
 
         <div class="card" style="border-left: 4px solid #e74c3c;">
             <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">⚠️ Agent Health Anomalies</h3>
-            <div style="font-size: 2.2em; font-weight: 800; color: #e74c3c; margin-top: 10px;"><?= $missing_ip_count ?></div>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Active systems missing a registered IP address.</p>
+            <dl style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;margin:12px 0 0;color:#e5e8e8;">
+                <dt>Missing CV/ENV</dt>
+                <dd style="margin:0;text-align:right;font-size:1.25em;font-weight:700;color:#f5b041;"><?= $missing_cv_env_count ?></dd>
+                <dt>Missing IP Address</dt>
+                <dd style="margin:0;text-align:right;font-size:1.25em;font-weight:700;color:#f5b041;"><?= $missing_ip_count ?></dd>
+            </dl>
         </div>
 
         <div class="card" style="border-left: 4px solid #f39c12;">
@@ -211,11 +220,12 @@ foreach ($satellite_hosts as $host) {
             </div>
 
             <div class="table-container">
-                <table>
+                <table data-rhel-sortable>
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Hostname</th>
+                            <th>Operating System</th>
                             <th>IP Address</th>
                             <th>Kernel</th>
                             <th>CV Environment</th>
@@ -242,7 +252,7 @@ foreach ($satellite_hosts as $host) {
                             $checkin_style   = 'color: #e74c3c; font-weight: bold;';
                         } else {
                             $lc_obj = DateTime::createFromFormat('Y-m-d', substr($lc, 0, 10));
-                            if ($lc_obj && $lc_obj < $thirty_days_ago) {
+                            if ($lc_obj && $lc_obj < $checkin_limit) {
                                 $is_stale    = true;
                                 $checkin_style = 'color: #e74c3c; font-weight: bold;';
                             }
@@ -253,6 +263,7 @@ foreach ($satellite_hosts as $host) {
                         <td class="nowrap-cell" style="color: #e5e8e8; font-weight: 500;">
                             <?= htmlspecialchars($host['hostname'] ?? '') ?>
                         </td>
+                        <td class="nowrap-cell"><?= htmlspecialchars($host['os'] ?? 'N/A') ?></td>
                         <td style="font-family: monospace; <?= $ip_style ?>" class="nowrap-cell">
                             <?= $ip_missing ? '⚠️ ' : '' ?><?= htmlspecialchars($ip_value ?: 'N/A') ?>
                         </td>
@@ -284,5 +295,6 @@ foreach ($satellite_hosts as $host) {
     </div>
 
 </div>
+<script src="assets/js/rhel-table-sort.js" defer></script>
 </body>
 </html>

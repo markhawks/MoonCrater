@@ -8,11 +8,11 @@ development and production. The target server needs access to its enabled RHEL p
 
 ## Fresh installation from RPM
 
-Download the unsigned RPM from the [MoonCrater 1.50 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.50).
+Download the unsigned RPM from the [MoonCrater 1.51 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.51).
 On RHEL 10.3 with package repositories enabled:
 
 ```bash
-sudo dnf install ./mooncrater-1.50-1.el10.noarch.rpm
+sudo dnf install ./mooncrater-1.51-1.el10.noarch.rpm
 sudo mooncrater-setup
 ```
 

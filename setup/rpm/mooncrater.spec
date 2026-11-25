@@ -1,5 +1,5 @@
 Name:           mooncrater
-Version:        1.50
+Version:        1.51
 Release:        1%{?dist}
 Summary:        Linux infrastructure inventory and migration portal
 License:        AGPL-3.0-or-later

@@ -104,3 +104,7 @@ sudo systemctl enable --now mooncrater-satellite-import.timer
 
 Successfully imported CSV files remain in the inbox as the source archive. Repeated timer runs skip
 files already recorded in the database. A failed file is retried on the next run.
+# Satellite exporter compatibility
+
+The Satellite exporter also works with MoonCrater 1.51 installed via RPM. Complete
+the [MoonCrater server setup](../rhel10/README.md) before configuring SSH delivery.

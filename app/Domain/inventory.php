@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 const SATELLITE_CHECKIN_MAX_AGE_DAYS = 30;
 
+function is_valid_kernel_version(?string $value): bool
+{
+    return preg_match('/\A[0-9]+\.[0-9]+\.[0-9]+(?:[-+._][a-z0-9+._~\-]+)?\z/i', trim($value ?? '')) === 1;
+}
+
 function detect_os_major(?string $osString): string
 {
     $os = strtolower($osString ?? '');

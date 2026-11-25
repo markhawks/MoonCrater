@@ -1,42 +1,35 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+require_once __DIR__ . '/../app/Domain/inventory.php';
 $current_user = require_login($pdo);
 
 date_default_timezone_set('Europe/Rome');
-
-// Helper: estrae la major version RHEL dalla stringa OS
-function detect_os_major($os_string) {
-    $os = strtolower($os_string ?? '');
-    if (preg_match('/(linux|server|rhel|redhat)\s+10/i', $os)) return '10';
-    if (preg_match('/(linux|server|rhel|redhat)\s+9/i',  $os)) return '9';
-    if (preg_match('/(linux|server|rhel|redhat)\s+8/i',  $os)) return '8';
-    if (preg_match('/(linux|server|rhel|redhat)\s+7/i',  $os)) return '7';
-    return 'unknown';
-}
 
 // Estrazione dati con ordinamento versionato
 try {
     $kernel_stats_query = $pdo->query("
         SELECT os, kernel, COUNT(*) as total
         FROM inventory_satellite
-        WHERE status = 'active'
-          AND kernel IS NOT NULL
-          AND kernel <> 'N/A'
+        WHERE status IN ('active', 'unhealthy')
           AND role = 'host'
         GROUP BY os, kernel
-        ORDER BY
-            (string_to_array(regexp_replace(os,     '[^0-9.]', '', 'g'), '.')::int[])[1] DESC,
-            string_to_array(regexp_replace(os,     '[^0-9.]', '', 'g'), '.')::int[] DESC,
-            string_to_array(regexp_replace(kernel, '[^0-9.]', '', 'g'), '.')::int[] DESC
     ");
-    $kernel_stats = $kernel_stats_query->fetchAll(PDO::FETCH_ASSOC);
+    $kernel_stats = array_filter(
+        $kernel_stats_query->fetchAll(PDO::FETCH_ASSOC),
+        static fn (array $row): bool => is_valid_kernel_version($row['kernel'])
+    );
+    usort($kernel_stats, static function (array $a, array $b): int {
+        $majorOrder = (int) detect_os_major($b['os']) <=> (int) detect_os_major($a['os']);
+        return $majorOrder ?: (strnatcasecmp($b['os'] ?? '', $a['os'] ?? '') ?: strnatcasecmp($b['kernel'], $a['kernel']));
+    });
 } catch (Exception $e) {
+    error_log('Kernel statistics query failed: ' . $e->getMessage());
     $kernel_stats = [];
 }
 
 // KPI
 $total_systems    = 0;
-$distinct_kernels = count($kernel_stats);
+$distinct_kernels = count(array_unique(array_column($kernel_stats, 'kernel')));
 foreach ($kernel_stats as $stat) {
     $total_systems += (int)$stat['total'];
 }
@@ -180,7 +173,7 @@ foreach ($kernel_stats as $stat) {
         <div>
             <h1 style="margin: 0; font-size: 1.8em; color: #fff;">⚙️ Kernel Version Distribution</h1>
             <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.95em;">
-                Kernel breakdown across all active RHEL systems managed by Red Hat Satellite
+                Kernel breakdown for hosts in the Satellite inventory
             </p>
         </div>
         <div>
@@ -197,7 +190,7 @@ foreach ($kernel_stats as $stat) {
                 <?= $total_systems ?>
             </span>
             <small style="color: #7f8c8d; display: block; margin-top: 5px;">
-                Active hosts with a valid kernel tracked in Satellite
+                Active or unhealthy hosts with a valid kernel tracked in Satellite
             </small>
         </div>
 

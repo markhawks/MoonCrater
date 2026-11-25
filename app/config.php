@@ -56,6 +56,9 @@ $externalDashboardSections = [
     'os' => 'External OS Distribution',
     'missing' => 'Missing in Satellite',
     'coverage' => 'Coverage',
+    'satellite_only' => 'Satellite Only',
+    'diff_inventory' => 'Diff Inventory View button',
+    'zabbix_stats' => 'Zabbix Stats button',
 ];
 $externalDashboardVisibility = array_fill_keys(array_keys($externalDashboardSections), false);
 

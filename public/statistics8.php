@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/Domain/inventory.php';
+require_once __DIR__ . '/../app/Domain/inventory.php';
 $current_user = require_login($pdo);
 
 // 2. Data Extraction & Protected Numerical Sorting (Handles 8.10 > 8.9 and ignores corrupted text)
@@ -15,7 +16,7 @@ try {
             OR os ILIKE '%RHEL 8%'
             OR os ILIKE '%Red Hat%8%'
           )
-          AND status = 'active'
+          AND status IN ('active', 'unhealthy')
         ORDER BY
             CASE
                 WHEN regexp_replace(os, '^[^0-9]*8\.([0-9]+).*$', '\1') ~ '^[0-9]+$'
@@ -35,7 +36,20 @@ $total_rhel8 = count($satellite_hosts);
 
 // Count hosts missing a valid IP address
 $missing_ip_count = 0;
+$missing_cv_env_count = 0;
+$stale_checkin_count = 0;
+$checkin_limit = (new DateTime())->modify('-' . SATELLITE_CHECKIN_MAX_AGE_DAYS . ' days');
 foreach ($satellite_hosts as $host) {
+    $lastCheckin = trim($host['last_checkin'] ?? '');
+    $checkinDate = DateTime::createFromFormat('Y-m-d', substr($lastCheckin, 0, 10));
+    if ($lastCheckin === '' || in_array($lastCheckin, ['N/A', 'N/D'], true)
+        || ($checkinDate && $checkinDate < $checkin_limit)) {
+        $stale_checkin_count++;
+    }
+    $cvEnv = strtoupper(trim($host['content_view_environment'] ?? ''));
+    if (in_array($cvEnv, ['', 'N/A', 'N/D', 'NULL'], true)) {
+        $missing_cv_env_count++;
+    }
     $ip = trim($host['ip'] ?? '');
     if (empty($ip) || $ip === 'N/A' || $ip === 'N/D') {
         $missing_ip_count++;
@@ -61,7 +75,7 @@ uksort($minor_distribution, 'strnatcasecmp');
         body { background-color: #1a252f; color: #e5e8e8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header-panel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .stats-row { display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: nowrap; }
+        .stats-row { display: grid; gap: 20px; margin-bottom: 25px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
         .card { background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 6px; flex: 1; }
         .btn-back { background-color: rgba(255,255,255,0.1); color: #fff; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9em; transition: background 0.2s; }
         .btn-back:hover { background-color: rgba(255,255,255,0.2); }
@@ -128,22 +142,49 @@ uksort($minor_distribution, 'strnatcasecmp');
 
         <div class="card" style="border-left: 4px solid #e74c3c;">
             <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">⚠️ Agent Health Anomalies</h3>
-            <div style="font-size: 2.2em; font-weight: 800; color: #e74c3c; margin-top: 10px;"><?= $missing_ip_count ?></div>
-            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Active systems missing a registered IP Address. Subscription or facter check required.</p>
+            <dl style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;margin:12px 0 0;color:#e5e8e8;">
+                <dt>Missing CV/ENV</dt>
+                <dd style="margin:0;text-align:right;font-size:1.25em;font-weight:700;color:#f5b041;"><?= $missing_cv_env_count ?></dd>
+                <dt>Missing IP Address</dt>
+                <dd style="margin:0;text-align:right;font-size:1.25em;font-weight:700;color:#f5b041;"><?= $missing_ip_count ?></dd>
+            </dl>
         </div>
 
-        <div class="card">
-            <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">Minor Release Breakdown</h3>
-            <div style="display: flex; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
-                <?php foreach ($minor_distribution as $version => $count): ?>
-                    <div style="background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03); font-size: 0.85em;">
-                        <span style="color: #abb2b9;"><?= htmlspecialchars($version) ?>:</span>
-                        <strong style="color: #fff;"><?= $count ?></strong>
-                    </div>
-                <?php endforeach; ?>
+        <div class="card" style="border-left: 4px solid #f39c12;">
+            <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">⏳ Stale Check-in</h3>
+            <div style="font-size: 2.2em; font-weight: 800; color: #f39c12; margin-top: 10px;"><?= $stale_checkin_count ?></div>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with a last check-in older than <?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?> days or unavailable.</p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid #2ecc71;">
+            <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">✅ Healthy Hosts</h3>
+            <div style="font-size: 2.2em; font-weight: 800; color: #2ecc71; margin-top: 10px;"><?= $total_rhel8 - $stale_checkin_count ?></div>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Hosts with recent check-in within the last <?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?> days.</p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid #9b59b6;">
+            <h3 style="margin: 0; color: #85929e; font-size: 1em; text-transform: uppercase;">📦 Minor Releases</h3>
+            <div style="font-size: 2.2em; font-weight: 800; color: #9b59b6; margin-top: 10px;"><?= count($minor_distribution) ?></div>
+            <p style="margin: 5px 0 0 0; color: #7f8c8d; font-size: 0.8em;">Distinct RHEL 8 minor versions detected in inventory.</p>
+        </div>
+
+    </div>
+
+    <!-- DISTRIBUZIONE PER MINOR RELEASE -->
+    <?php if (!empty($minor_distribution)): ?>
+    <div class="card" style="margin-bottom: 25px;">
+        <h3 style="margin: 0 0 15px 0; color: #85929e; font-size: 1em; text-transform: uppercase;">📊 Distribution by Minor Release</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <?php foreach ($minor_distribution as $os_name => $count): ?>
+            <div style="background: rgba(44,62,80,0.3); border: 1px solid rgba(133,193,233,0.2); border-radius: 6px; padding: 10px 16px; min-width: 140px; text-align: center;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px;"><?= htmlspecialchars($os_name) ?></div>
+                <div style="font-size: 22px; font-weight: 700; color: #85c1e9;"><?= $count ?></div>
+                <div style="font-size: 11px; color: #566573; margin-top: 2px;"><?= round($count / $total_rhel8 * 100, 1) ?>%</div>
             </div>
+            <?php endforeach; ?>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="card" style="padding: 25px;">
         <h2 style="margin-top: 0; color: #fff; font-size: 1.3em;">📋 Red Hat 8 Inventory (Sorted by Minor &amp; Kernel)</h2>
@@ -167,14 +208,14 @@ uksort($minor_distribution, 'strnatcasecmp');
                 </div>
 
                 <div class="table-container">
-                    <table>
+                    <table data-rhel-sortable>
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Hostname</th>
                                 <th>Operating System</th>
                                 <th>IP Address</th>
-                                <th>Kernel Version (Ascending)</th>
+                                <th>Kernel Version</th>
                                 <th>Content View Env</th>
                                 <th>Location</th>
                                 <th>Last Check-in</th>
@@ -238,5 +279,6 @@ uksort($minor_distribution, 'strnatcasecmp');
     </div>
 </div>
 
+<script src="assets/js/rhel-table-sort.js" defer></script>
 </body>
 </html>

@@ -2,6 +2,15 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.51] - 2026-11-25
+
+- Added a dashboard shortcut for importing Satellite CSV files and improved the contrast of search filters.
+- Added Content View filters, migration counters, and configurable visibility for comparison and statistics links.
+- Added clickable Satellite anomaly counters for check-ins, missing IP or Content View, invalid kernels, and non-FQDN hostnames.
+- Included unhealthy hosts in Satellite OS distribution and RHEL and kernel statistics, and aligned the RHEL health cards and sortable tables.
+- Reorganized the dashboard counters and Statistics & Views links.
+- Published a new RPM for fresh installations on RHEL 10.3.
+
 ## [1.50] - 2026-11-25
 
 - Documented RHEL 10.2 and 10.3 as installer targets, with RHEL 10.3 as the development and production baseline.

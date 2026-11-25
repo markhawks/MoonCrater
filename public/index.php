@@ -59,6 +59,8 @@ try {
 
 
 $filter_missing = $_GET['missing'] ?? 'all';
+$hasContentView = static fn (?string $value): bool =>
+    !in_array(strtoupper(trim($value ?? '')), ['', 'N/A', 'N/D', 'NULL'], true);
 $filter_os = $_GET['os'] ?? 'all';
 $filter_search = $_GET['search'] ?? '';
 
@@ -145,6 +147,14 @@ $matched_sat_keys = [];
 // Inizializziamo i contatori a zero
 $active_external_count = 0;
 $active_satellite_count = 0;
+$anomalyHosts = array_fill_keys(['unhealthy', 'ip', 'content_view', 'kernel', 'fqdn'], []);
+$requestedAnomaly = $_GET['satellite_anomaly'] ?? '';
+$satelliteAnomaly = is_string($requestedAnomaly) && isset($anomalyHosts[$requestedAnomaly]) ? $requestedAnomaly : '';
+$satelliteMigrationCounts = [
+    'RHEL7toRHEL8' => 0,
+    'RHEL8.10toRHEL9.8' => 0,
+    'RHEL9.8toRHEL10.2' => 0,
+];
 $external_rhel7 = $external_rhel8 = $external_rhel9 = $external_rhel10 = $external_unknown = 0;
 $sat_rhel7 = $sat_rhel8 = $sat_rhel9 = $sat_rhel10 = $sat_unknown = 0;
 
@@ -205,11 +215,38 @@ foreach ($sat_lookup as $key => $sat_data) {
     // Solo gli host attivi e non esclusi entrano nei conteggi
     if ($s_status === 'active' && !$s_excluded) {
         $active_satellite_count++;
+        if (in_array(strtoupper(trim($sat_data['ip'] ?? '')), ['', 'N/A', 'N/D', 'NULL'], true)) {
+            $anomalyHosts['ip'][$key] = true;
+        }
 
         if (!isset($matched_sat_keys[$key])) {
             $satellite_only_count++;
         }
+    }
 
+    // Count hosts present in Satellite even when their check-in is unhealthy.
+    if (!$s_excluded && in_array($s_status, ['active', 'unhealthy'], true)) {
+        $contentView = $sat_data['content_view_environment'] ?? '';
+        foreach ($satelliteMigrationCounts as $migrationView => $count) {
+            $pattern = '/(?<![a-z0-9.])' . preg_quote($migrationView, '/') . '(?![a-z0-9.])/i';
+            if (preg_match($pattern, $contentView)) {
+                $satelliteMigrationCounts[$migrationView]++;
+                break;
+            }
+        }
+        if (!$hasContentView($sat_data['content_view_environment'] ?? null)) {
+            $anomalyHosts['content_view'][$key] = true;
+        }
+        if (!is_valid_kernel_version($sat_data['kernel'] ?? null)) {
+            $anomalyHosts['kernel'][$key] = true;
+        }
+        $hostname = rtrim(trim($sat_data['hostname'] ?? ''), '.');
+        if (!str_contains($hostname, '.') || filter_var($hostname, FILTER_VALIDATE_IP) || !is_valid_hostname($hostname)) {
+            $anomalyHosts['fqdn'][$key] = true;
+        }
+        if (satellite_status_from_checkin($sat_data['last_checkin'] ?? null) === 'unhealthy') {
+            $anomalyHosts['unhealthy'][$key] = true;
+        }
         $sat_major = detect_os_major($sat_data['os'] ?? '');
         if ($sat_major === '7')      $sat_rhel7++;
         elseif ($sat_major === '8')  $sat_rhel8++;
@@ -223,6 +260,15 @@ foreach ($sat_lookup as $key => $sat_data) {
 
 // 1. Recuperiamo il filtro location inviato via GET (se non c'è, impostiamo 'all')
 $filter_location = $_GET['location'] ?? 'all';
+$requestedContentView = $_GET['content_view'] ?? '';
+$filterContentView = is_string($requestedContentView) ? trim($requestedContentView) : '';
+$contentViewOptions = [];
+foreach ($sat_lookup as $host) {
+    $value = trim($host['content_view_environment'] ?? '');
+    if ($hasContentView($value)) $contentViewOptions[] = $value;
+}
+$contentViewOptions = array_values(array_unique($contentViewOptions));
+natcasesort($contentViewOptions);
 
 // 2. Query dinamica per estrarre tutte le location uniche presenti nel DB (escludendo N/A e vuoti)
 $locations_list = [];
@@ -279,26 +325,6 @@ try {
 
 // ... dopo la connessione al DB ($pdo) e gli altri conteggi esistenti ...
 
-$total_agent_anomalies = 0;
-try {
-    // Conta gli host attivi che non hanno un IP valido valorizzato
-    $stmt_anomalies = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM inventory_satellite
-        WHERE status = 'active'
-          AND (
-            ip IS NULL
-            OR TRIM(ip) = ''
-            OR TRIM(ip) = 'N/A'
-            OR TRIM(ip) = 'N/D'
-          )
-    ");
-    $stmt_anomalies->execute();
-    $total_agent_anomalies = (int)$stmt_anomalies->fetchColumn();
-} catch (Exception $e) {
-    // Gestione errore opzionale, per ora stampiamo solo a schermo in caso di problemi
-    $total_agent_anomalies = 0;
-}
 
 
 
@@ -448,6 +474,16 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.51' => [
+            'date' => '2026-11-25',
+            'changes' => [
+                'Added a dashboard shortcut for importing Satellite CSV files and improved the contrast of search filters.',
+                'Added Content View filters, migration counters, and configurable visibility for comparison and statistics links.',
+                'Added clickable Satellite anomaly counters for check-ins, missing IP or Content View, invalid kernels, and non-FQDN hostnames.',
+                'Included unhealthy hosts in Satellite OS distribution and RHEL and kernel statistics, and aligned the RHEL health cards and sortable tables.',
+                'Reorganized the dashboard counters and Statistics & Views links.',
+            ],
+        ],
         '1.50' => [
             'date' => '2026-11-25',
             'changes' => [
@@ -810,7 +846,7 @@ if (file_exists('import_satellite.php')) {
 
 
     <!-- RIGA 1: 5 stat card inventory -->
-    <div style="display: grid; grid-template-columns: repeat(<?= 2 + (int) $externalDashboardVisibility['active'] + (int) $externalDashboardVisibility['missing'] + (int) $externalDashboardVisibility['coverage'] ?>, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(<?= 1 + (int) $externalDashboardVisibility['active'] + (int) $externalDashboardVisibility['missing'] + (int) $externalDashboardVisibility['coverage'] + (int) $externalDashboardVisibility['satellite_only'] ?>, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px;">
 
         <?php
         // Coverage: verde se >= 90%, giallo se >= 70%, rosso sotto
@@ -829,6 +865,8 @@ if (file_exists('import_satellite.php')) {
 
         <!-- Satellite Active -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(52,152,219,0.5); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px 48px;">
+            <div class="satellite-metric-tile">
             <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Satellite Active</div>
             <div style="display: flex; align-items: baseline; gap: 8px; line-height: 1;">
                 <div style="font-size: 32px; font-weight: 700; color: #3498db;"><?= $active_satellite_count ?></div>
@@ -844,6 +882,24 @@ if (file_exists('import_satellite.php')) {
                 +<?= count($infra_stats) ?> Active Satellite/Capsule server<?= count($infra_stats) > 1 ? 's' : '' ?>
             </div>
             <?php endif; ?>
+            </div>
+            <div aria-label="Satellite OS Distribution" title="Includes hosts with an unhealthy check-in"
+                 style="display:flex;flex-wrap:wrap;gap:14px 24px;">
+                <?php foreach ([
+                    ['RHEL 7', $sat_rhel7, '#e74c3c'],
+                    ['RHEL 8', $sat_rhel8, '#f39c12'],
+                    ['RHEL 9', $sat_rhel9, '#2ecc71'],
+                    ['RHEL 10', $sat_rhel10, '#3498db'],
+                    ['Unknown', $sat_unknown, '#95a5a6'],
+                ] as [$label, $count, $color]): ?>
+                    <div class="satellite-metric-tile">
+                        <div style="font-size:11px;color:#7f8c8d;text-transform:uppercase;letter-spacing:.5px;font-weight:bold;"><?= $label ?></div>
+                        <div style="font-size:32px;font-weight:700;line-height:1;color:<?= $color ?>;"><?= $count ?></div>
+                        <div style="font-size:11px;color:#abb2b9;"><?= $label === 'Unknown' ? 'Other or unknown OS' : 'Hosts in Satellite' ?></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            </div>
         </div>
 
         <?php if ($externalDashboardVisibility['missing']): ?>
@@ -864,19 +920,19 @@ if (file_exists('import_satellite.php')) {
         </div>
         <?php endif; ?>
 
+        <?php if ($externalDashboardVisibility['satellite_only']): ?>
         <!-- Satellite Only -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(243,156,18,0.5); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Satellite Only</div>
             <div style="font-size: 32px; font-weight: 700; color: #f39c12; line-height: 1;"><?= $satellite_only_count ?></div>
             <div style="font-size: 11px; color: #566573;">Present only in Satellite</div>
         </div>
+        <?php endif; ?>
 
     </div>
 
-    <!-- RIGA 2: OS Distribution External + Satellite -->
-    <div style="display: grid; grid-template-columns: <?= $externalDashboardVisibility['os'] ? '1fr 1fr' : '1fr' ?>; gap: 12px; margin-bottom: 20px;">
-
-        <?php if ($externalDashboardVisibility['os']): ?>
+    <?php if ($externalDashboardVisibility['os']): ?>
+    <div style="margin-bottom:20px;">
         <!-- External OS Distribution -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 14px 18px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
             <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; white-space: nowrap;">🖥️ External OS distribution</div>
@@ -892,25 +948,8 @@ if (file_exists('import_satellite.php')) {
                 <span style="font-size: 13px; color: #566573;">Unknown: <strong style="color: <?= $external_unknown > 0 ? '#95a5a6' : '#7f8c8d' ?>;"><?= $external_unknown ?></strong></span>
             </div>
         </div>
-        <?php endif; ?>
-
-        <!-- Satellite OS Distribution -->
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 14px 18px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-            <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; white-space: nowrap;">🛰️ Satellite OS distribution</div>
-            <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-                <span style="font-size: 13px; color: #566573;">RHEL 7: <strong style="color: <?= $sat_rhel7 > 0 ? '#e74c3c' : '#7f8c8d' ?>;"><?= $sat_rhel7 ?></strong></span>
-                <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">RHEL 8: <strong style="color: <?= $sat_rhel8 > 0 ? '#f39c12' : '#7f8c8d' ?>;"><?= $sat_rhel8 ?></strong></span>
-                <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">RHEL 9: <strong style="color: <?= $sat_rhel9 > 0 ? '#2ecc71' : '#7f8c8d' ?>;"><?= $sat_rhel9 ?></strong></span>
-                <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">RHEL 10: <strong style="color: <?= $sat_rhel10 > 0 ? '#3498db' : '#7f8c8d' ?>;"><?= $sat_rhel10 ?></strong></span>
-                <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">Unknown: <strong style="color: <?= $sat_unknown > 0 ? '#95a5a6' : '#7f8c8d' ?>;"><?= $sat_unknown ?></strong></span>
-            </div>
-        </div>
-
     </div>
+    <?php endif; ?>
 
 
     <!-- RIGA 3: Infrastructure (Satellite + Capsule) -->
@@ -1010,17 +1049,33 @@ if (file_exists('import_satellite.php')) {
         <p style="font-size: 11px; color: #85929e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">⚠️ Agent health &amp; anomalies</p>
 
         <!-- Totali -->
-        <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start;">
+        <div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;flex-wrap:wrap;">
             <div style="flex: 1;">
                 <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 3px;">Unhealthy hosts</div>
-                <div style="font-size: 28px; font-weight: 600; color: #e74c3c; line-height: 1;"><?= $total_unhealthy ?></div>
+                <a href="?satellite_anomaly=unhealthy#satellite-only-content" style="font-size:28px;font-weight:600;color:#e74c3c;line-height:1;"><?= count($anomalyHosts['unhealthy']) ?></a>
                 <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">check-in &gt;<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d, unavailable, or missing</div>
             </div>
             <div style="width: 1px; background: rgba(255,255,255,0.08); align-self: stretch;"></div>
             <div style="flex: 1;">
                 <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 3px;">IP anomalies</div>
-                <div style="font-size: 28px; font-weight: 600; color: #e67e22; line-height: 1;"><?= $total_agent_anomalies ?></div>
+                <a href="?satellite_anomaly=ip#satellite-only-content" style="font-size:28px;font-weight:600;color:#e67e22;line-height:1;"><?= count($anomalyHosts['ip']) ?></a>
                 <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">active hosts without IP</div>
+            </div>
+            <div style="width: 1px; background: rgba(255,255,255,0.08); align-self: stretch;"></div>
+            <div style="flex: 1;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 3px;">Missing Content View</div>
+                <a href="?satellite_anomaly=content_view#satellite-only-content" style="font-size:28px;font-weight:600;color:#e67e22;line-height:1;"><?= count($anomalyHosts['content_view']) ?></a>
+                <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">Satellite hosts without a Content View</div>
+            </div>
+            <div style="width: 1px; background: rgba(255,255,255,0.08); align-self: stretch;"></div>
+            <div style="flex: 1;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 3px;">Kernel anomalies</div>
+                <a href="?satellite_anomaly=kernel#satellite-only-content" style="font-size:28px;font-weight:600;color:#e67e22;line-height:1;"><?= count($anomalyHosts['kernel']) ?></a>
+                <div style="font-size: 10px; color: #7f8c8d; margin-top: 2px;">Missing or invalid kernel version</div>
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:11px;color:#7f8c8d;margin-bottom:3px;">Non-FQDN hostnames</div>
+                <a href="?satellite_anomaly=fqdn#satellite-only-content" style="font-size:28px;font-weight:600;color:#e67e22;line-height:1;"><?= count($anomalyHosts['fqdn']) ?></a>
             </div>
         </div>
 
@@ -1035,21 +1090,21 @@ if (file_exists('import_satellite.php')) {
                 </div>
             </div>
 
-            <!-- Riga Unified -->
+            <!-- Satellite Inventory View -->
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 0; border-top: 1px solid rgba(255,255,255,0.05);">
-                <span style="color: #abb2b9;">Unified Inventory</span>
-                <div style="display: flex; gap: 6px;">
-                    <span style="background: rgba(46,204,113,0.08); color: #2ecc71; border: 1px solid rgba(46,204,113,0.2); border-radius: 3px; padding: 1px 7px; font-size: 11px;">✓ <?= $unified_healthy ?></span>
-                    <span style="background: rgba(231,76,60,0.07); color: #e74c3c; border: 1px solid rgba(231,76,60,0.18); border-radius: 3px; padding: 1px 7px; font-size: 11px;">✕ <?= $unified_unhealthy ?></span>
-                </div>
-            </div>
-
-            <!-- Riga Satellite Only -->
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 0; border-top: 1px solid rgba(255,255,255,0.05);">
-                <span style="color: #abb2b9;">Satellite Only</span>
+                <span style="color: #abb2b9;">Satellite Inventory View</span>
                 <div style="display: flex; gap: 6px;">
                     <span style="background: rgba(46,204,113,0.08); color: #2ecc71; border: 1px solid rgba(46,204,113,0.2); border-radius: 3px; padding: 1px 7px; font-size: 11px;">✓ <?= $satonly_healthy ?></span>
                     <span style="background: rgba(231,76,60,0.07); color: #e74c3c; border: 1px solid rgba(231,76,60,0.18); border-radius: 3px; padding: 1px 7px; font-size: 11px;">✕ <?= $satonly_unhealthy ?></span>
+                </div>
+            </div>
+
+            <!-- Unified Inventory View -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+                <span style="color: #abb2b9;">Unified Inventory View</span>
+                <div style="display: flex; gap: 6px;">
+                    <span style="background: rgba(46,204,113,0.08); color: #2ecc71; border: 1px solid rgba(46,204,113,0.2); border-radius: 3px; padding: 1px 7px; font-size: 11px;">✓ <?= $unified_healthy ?></span>
+                    <span style="background: rgba(231,76,60,0.07); color: #e74c3c; border: 1px solid rgba(231,76,60,0.18); border-radius: 3px; padding: 1px 7px; font-size: 11px;">✕ <?= $unified_unhealthy ?></span>
                 </div>
             </div>
 
@@ -1082,16 +1137,23 @@ if (file_exists('import_satellite.php')) {
         <p style="font-size: 11px; color: #85929e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">📈 Statistics &amp; views</p>
         <?php
         $stat_links = [
-            ['url' => 'statistics7.php',       'label' => 'RHEL 7 stats',  'color' => '#e74c3c'],
-            ['url' => 'statistics8.php',       'label' => 'RHEL 8 stats',  'color' => '#f39c12'],
-            ['url' => 'statistics9.php',       'label' => 'RHEL 9 stats',  'color' => '#2ecc71'],
             ['url' => 'statistics10.php',      'label' => 'RHEL 10 stats', 'color' => '#3498db'],
-            ['url' => 'kernel_stats.php',      'label' => 'Kernel stats',  'icon' => '⚙️'],
-            ['url' => 'statistics_zabbix.php', 'label' => 'Zabbix stats',  'icon' => '📡'],
-            ['url' => 'migration_trends.php', 'label' => 'Migration trends', 'icon' => '&#8644;'],
-            ['url' => 'diff_inventory.php', 'label' => 'Diff Inventory View', 'icon' => '&#8646;'],
+            ['url' => 'statistics9.php',       'label' => 'RHEL 9 stats',  'color' => '#2ecc71'],
+            ['url' => 'statistics8.php',       'label' => 'RHEL 8 stats',  'color' => '#f39c12'],
+            ['url' => 'statistics7.php',       'label' => 'RHEL 7 stats',  'color' => '#e74c3c'],
+            ...($externalDashboardVisibility['zabbix_stats'] ? [
+                ['url' => 'statistics_zabbix.php', 'label' => 'Zabbix Stats', 'icon' => '📡'],
+            ] : []),
+            ...($externalDashboardVisibility['diff_inventory'] ? [
+                ['url' => 'diff_inventory.php', 'label' => 'Diff Inventory View', 'icon' => '&#8646;'],
+            ] : []),
+            ['url' => 'kernel_stats.php', 'label' => 'Kernel Stats', 'icon' => '⚙️', 'separator' => true],
+            ['url' => 'migration_trends.php', 'label' => 'Migration Trends', 'icon' => '&#8644;'],
         ];
         foreach ($stat_links as $lnk): ?>
+            <?php if (!empty($lnk['separator'])): ?>
+                <hr style="width:100%;margin:4px 0;border:0;border-top:1px solid rgba(255,255,255,.15);">
+            <?php endif; ?>
             <a href="<?= $lnk['url'] ?>" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03); color: #e5e8e8; text-decoration: none; font-size: 12px; transition: background 0.15s; white-space: nowrap;">
                 <span style="display: inline-flex; align-items: center; gap: 7px;">
                     <?php if (isset($lnk['color'])): ?>
@@ -1104,8 +1166,33 @@ if (file_exists('import_satellite.php')) {
                 <span style="color: #7f8c8d; margin-left: 6px;">›</span>
             </a>
         <?php endforeach; ?>
+        <hr style="width:100%;margin:4px 0;border:0;border-top:1px solid rgba(255,255,255,.15);">
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;font-size:11px;color:#abb2b9;">
+            <span style="color:#85929e;">Migration Content Views</span>
+            <?php foreach ($satelliteMigrationCounts as $migrationView => $count): ?>
+                <div style="display:flex;justify-content:space-between;gap:8px;">
+                    <span><?= htmlspecialchars($migrationView) ?></span>
+                    <strong><?= $count ?></strong>
+                </div>
+            <?php endforeach; ?>
+        </div>
     </div>
 
+    <style>
+        .dashboard-filter-select {
+            color-scheme: dark;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 7px 10px;
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .dashboard-filter-select, .dashboard-filter-select option {
+            background-color: #243442;
+            color: #f1f5f9;
+        }
+    </style>
     <!-- CARD 4: Search & Filters (più larga) -->
     <div class="card" style="display: flex; flex-direction: column;">
         <p style="font-size: 11px; color: #85929e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">🔍 Search &amp; filters</p>
@@ -1123,18 +1210,30 @@ if (file_exists('import_satellite.php')) {
 
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: 12px; color: #abb2b9; font-weight: bold;">Missing Status:</label>
-                    <select name="missing" style="padding: 7px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff; width: 100%; font-size: 13px; box-sizing: border-box;">
+                    <select name="missing" class="dashboard-filter-select">
                         <option value="all"       <?= $filter_missing == 'all'       ? 'selected' : '' ?>>All Systems</option>
                         <option value="missing"   <?= $filter_missing == 'missing'   ? 'selected' : '' ?>>Missing on Satellite</option>
                         <option value="matched"   <?= $filter_missing == 'matched'   ? 'selected' : '' ?>>Present on Satellite</option>
+                        <option value="has_content_view" <?= $filter_missing === 'has_content_view' ? 'selected' : '' ?>>Has Content View</option>
+                        <option value="null_content_view" <?= $filter_missing === 'null_content_view' ? 'selected' : '' ?>>Content View Null</option>
                         <option value="unhealthy" <?= $filter_missing == 'unhealthy' ? 'selected' : '' ?>>⏳ Unhealthy Check-in (&gt;<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d / N/A)</option>
                         <option value="healthy"   <?= $filter_missing == 'healthy'   ? 'selected' : '' ?>>✅ Healthy Check-in (&lt;=<?= SATELLITE_CHECKIN_MAX_AGE_DAYS ?>d)</option>
                     </select>
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label for="filter-content-view" style="font-size:12px;color:#abb2b9;font-weight:bold;">Content View:</label>
+                    <select id="filter-content-view" name="content_view" class="dashboard-filter-select">
+                        <option value="">All Content Views</option>
+                        <?php foreach ($contentViewOptions as $value): ?>
+                            <option value="<?= htmlspecialchars($value) ?>" <?= $filterContentView === $value ? 'selected' : '' ?>><?= htmlspecialchars($value) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: 12px; color: #abb2b9; font-weight: bold;">OS Major Version:</label>
-                    <select name="os" style="padding: 7px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff; width: 100%; font-size: 13px; box-sizing: border-box;">
+                    <select name="os" class="dashboard-filter-select">
                         <option value="all"     <?= $filter_os == 'all'     ? 'selected' : '' ?>>All Versions</option>
                         <option value="7"       <?= $filter_os == '7'       ? 'selected' : '' ?>>RHEL 7</option>
                         <option value="8"       <?= $filter_os == '8'       ? 'selected' : '' ?>>RHEL 8</option>
@@ -1146,7 +1245,7 @@ if (file_exists('import_satellite.php')) {
 
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: 12px; color: #abb2b9; font-weight: bold;">Location:</label>
-                    <select name="location" style="padding: 7px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff; width: 100%; font-size: 13px; box-sizing: border-box;">
+                    <select name="location" class="dashboard-filter-select">
                         <option value="all" <?= $filter_location == 'all' ? 'selected' : '' ?>>All Locations</option>
                         <?php foreach ($locations_list as $loc): ?>
                             <option value="<?= htmlspecialchars($loc) ?>" <?= $filter_location == $loc ? 'selected' : '' ?>><?= htmlspecialchars($loc) ?></option>
@@ -1166,6 +1265,21 @@ if (file_exists('import_satellite.php')) {
     <!-- CARD 5: Maintenance & Export -->
     <div class="card" style="display: flex; flex-direction: column; gap: 8px;">
         <p style="font-size: 11px; color: #85929e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">⚙️ Maintenance &amp; export</p>
+
+        <?php if ($is_admin): ?>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:10px;color:#7f8c8d;text-transform:uppercase;letter-spacing:.4px;font-weight:bold;">Import CSV</div>
+            <form action="import_satellite.php" method="post" enctype="multipart/form-data" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="file" id="dashboard-satellite-csv" name="satellite_csv" accept=".csv,text/csv" hidden
+                       onchange="if (this.files.length) this.form.requestSubmit()">
+                <button type="button" onclick="document.getElementById('dashboard-satellite-csv').click()"
+                        style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(230,126,34,.12);color:#f5b041;font-size:12px;cursor:pointer;text-align:left;font-weight:bold;">
+                    <span aria-hidden="true">📥</span> Satellite Inventory Import
+                </button>
+            </form>
+        </div>
+        <?php endif; ?>
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
             <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.4px; font-weight: bold;">Export CSV</div>
@@ -1210,6 +1324,9 @@ if (file_exists('import_satellite.php')) {
         <span style="font-size:1.5em;font-weight:700;">Satellite Inventory View</span><span id="satellite-only-arrow" aria-hidden="true" style="font-size:20px;color:#5dade2;transition:transform .15s;transform:rotate(90deg)">▸</span>
     </button>
     <div id="satellite-only-content" style="margin-top:16px;">
+        <?php if ($satelliteAnomaly !== ''): ?>
+            <p>Anomaly filter active · <a href="index.php#satellite-only-content">Clear anomaly filter</a></p>
+        <?php endif; ?>
             <fieldset style="display:flex;gap:12px;flex-wrap:wrap;margin:0 0 12px;">
                 <legend>Show/Hide Columns</legend>
                 <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="2" checked> Satellite Hostname</label>
@@ -1226,11 +1343,14 @@ if (file_exists('import_satellite.php')) {
                 <tr>
                     <th>#</th>
                     <th class="col-hidden">External Hostname</th>
-                    <th>Satellite Hostname</th>
-                    <th>OS</th>
-                    <th>IP</th>
-                    <th>Kernel</th>
-                    <th>Content View</th>
+                    <?php foreach (['Satellite Hostname', 'OS', 'IP', 'Kernel', 'Content View'] as $column): ?>
+                        <th scope="col">
+                            <button type="button" class="satellite-sort-column"
+                                    style="background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0;">
+                                <?= htmlspecialchars($column) ?> <span aria-hidden="true">↕</span>
+                            </button>
+                        </th>
+                    <?php endforeach; ?>
                     <th>Location</th>
                     <th>Last Checkin</th>
                     <th style="width: 250px; background-color: #fcf8e3; color: #8a6d3b;">Patching Notes & Plan</th>
@@ -1243,6 +1363,7 @@ if (file_exists('import_satellite.php')) {
             $s_counter = 1;
             foreach ($sat_lookup as $norm_name => $sat_data) {
                 if (!isset($infra_lookup[$norm_name])) {
+                    if ($satelliteAnomaly !== '' && !isset($anomalyHosts[$satelliteAnomaly][$norm_name])) continue;
 
                     // --- Calcolo stale checkin per questa riga ---
                     $s_stale_checkin = false;
@@ -1265,6 +1386,9 @@ if (file_exists('import_satellite.php')) {
                     if ($filter_os != 'all' && detect_os_major($sat_data['os'] ?? '') != $filter_os) continue;
                     if ($filter_missing == 'unhealthy' && !$s_stale_checkin) continue;
                     if ($filter_missing == 'healthy'   &&  $s_stale_checkin) continue;
+                    if ($filter_missing === 'has_content_view' && !$hasContentView($sat_data['content_view_environment'] ?? null)) continue;
+                    if ($filter_missing === 'null_content_view' && $hasContentView($sat_data['content_view_environment'] ?? null)) continue;
+                    if ($filterContentView !== '' && trim($sat_data['content_view_environment'] ?? '') !== $filterContentView) continue;
 
                     $s_hkey        = strtolower(trim($sat_data['hostname'] ?? ''));
                     $s_is_excluded = isset($exclusions_lookup[$s_hkey]);
@@ -1431,6 +1555,9 @@ if (file_exists('import_satellite.php')) {
                 // Unhealthy e Healthy: escludono sempre gli host missing (usare filtro "Missing" per quelli)
                 if ($filter_missing == 'unhealthy' && ($is_missing || !$is_stale_checkin)) continue;
                 if ($filter_missing == 'healthy'   && ($is_missing ||  $is_stale_checkin)) continue;
+                if ($filter_missing === 'has_content_view' && ($is_missing || !$hasContentView($sat['content_view_environment'] ?? null))) continue;
+                if ($filter_missing === 'null_content_view' && ($is_missing || $hasContentView($sat['content_view_environment'] ?? null))) continue;
+                if ($filterContentView !== '' && ($is_missing || trim($sat['content_view_environment'] ?? '') !== $filterContentView)) continue;
 
                 // 3. Filtro Versione Sistema Operativo (OS Major)
                 if ($filter_os != 'all' && detect_os_major($row['os'] ?? '') != $filter_os) continue;
@@ -1597,6 +1724,35 @@ if (file_exists('import_satellite.php')) {
 </div>
 
 <script>
+const satelliteInventoryTable = document.getElementById('satelliteOnlyTable');
+const satelliteColumnCollator = new Intl.Collator('en', {numeric: true, sensitivity: 'base'});
+satelliteInventoryTable?.querySelectorAll('.satellite-sort-column').forEach(button => {
+    button.addEventListener('click', () => {
+        const header = button.closest('th');
+        const column = header.cellIndex;
+        const ascending = header.getAttribute('aria-sort') !== 'ascending';
+        const body = satelliteInventoryTable.tBodies[0];
+        const rows = Array.from(body.rows).filter(row => row.cells.length > column);
+        rows.sort((left, right) => {
+            const a = left.cells[column].textContent.trim();
+            const b = right.cells[column].textContent.trim();
+            const missing = value => /^(?:N\/[AD]|MISSING)?$/i.test(value);
+            if (missing(a) !== missing(b)) return missing(a) ? 1 : -1;
+            return (ascending ? 1 : -1) * satelliteColumnCollator.compare(a, b);
+        });
+        rows.forEach((row, index) => {
+            row.cells[0].textContent = index + 1;
+            body.appendChild(row);
+        });
+        satelliteInventoryTable.querySelectorAll('.satellite-sort-column').forEach(other => {
+            other.closest('th').removeAttribute('aria-sort');
+            other.querySelector('span').textContent = '↕';
+        });
+        header.setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
+        button.querySelector('span').textContent = ascending ? '↑' : '↓';
+    });
+});
+
 let sortAsc = false;
 
 function sortTabellaKernel() {
