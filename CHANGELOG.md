@@ -2,6 +2,19 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.50] - 2026-11-25
+
+- Documented RHEL 10.2 and 10.3 as installer targets, with RHEL 10.3 as the development and production baseline.
+
+- Documented Satellite Onboarding and the incremental migration from PHP to Python.
+- Moved manual CSV imports, snapshot creation, and recent backups to Settings → Inventory Data.
+- Added separate External and Satellite resets and a Factory Reset for both inventories and server notes.
+- Generalized Ivanti to External Inventory, with a PostgreSQL migration that preserves existing inventory and import history.
+- Made Satellite Inventory View the primary dashboard table and added independent column controls for both inventory views.
+- Added dashboard settings to show or hide Unified Inventory View, External Active, External OS Distribution, Missing in Satellite, and Coverage.
+- Split the dashboard CSV exports into dedicated Unified and Satellite downloads and consolidated administration under Settings.
+- Improved customer logo presentation and aligned the login logo with the dashboard.
+
 ## [1.41] - 2026-09-16
 
 ### Fixed

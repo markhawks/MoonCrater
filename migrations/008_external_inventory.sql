@@ -1,0 +1,11 @@
+BEGIN;
+
+ALTER TABLE inventory_ivanti RENAME TO inventory_external;
+ALTER TABLE ivanti_import_runs RENAME TO external_import_runs;
+ALTER SEQUENCE inventory_ivanti_id_seq RENAME TO inventory_external_id_seq;
+ALTER INDEX inventory_ivanti_hostname_normalized_idx RENAME TO inventory_external_hostname_normalized_idx;
+ALTER INDEX inventory_ivanti_status_idx RENAME TO inventory_external_status_idx;
+ALTER INDEX idx_ivanti_import_runs_imported_at RENAME TO idx_external_import_runs_imported_at;
+ALTER SEQUENCE ivanti_import_runs_id_seq RENAME TO external_import_runs_id_seq;
+
+COMMIT;

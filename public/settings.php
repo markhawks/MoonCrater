@@ -3,8 +3,70 @@ require __DIR__ . '/../app/bootstrap.php';
 $current_user = require_admin($pdo);
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') require_csrf();
 
+$recentInventoryBackups = [];
+try {
+    $recentInventoryBackups = $pdo->query("
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public' AND tablename ~ '^bak_notes_[0-9]{8}_[0-9]{4}$'
+        ORDER BY tablename DESC LIMIT 3
+    ")->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    error_log('Unable to list inventory snapshots: ' . $e->getMessage());
+}
+
 $message      = null;
 $message_type = 'ok';
+
+if (($_POST['action'] ?? '') === 'save_external_dashboard') {
+    $selected = $_POST['external_sections'] ?? [];
+    $selected = is_array($selected) ? $selected : [];
+    $visibility = [];
+    foreach ($externalDashboardSections as $key => $label) {
+        $visibility[$key] = in_array($key, $selected, true);
+    }
+    try {
+        $stmt = $pdo->prepare("INSERT INTO app_settings (setting_key, setting_value) VALUES ('external_dashboard_sections', ?) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = CURRENT_TIMESTAMP");
+        $stmt->execute([json_encode($visibility, JSON_THROW_ON_ERROR)]);
+        $externalDashboardVisibility = $visibility;
+        audit_event('settings.external_dashboard.update', $visibility);
+        $message = 'Dashboard visibility saved.';
+    } catch (PDOException $e) {
+        error_log('Dashboard visibility update failed: ' . $e->getMessage());
+        $message = 'Unable to save dashboard visibility.';
+        $message_type = 'error';
+    }
+}
+
+// Inventory resets deliberately exclude import history and backup snapshots.
+$inventoryResetTargets = [
+    'external' => ['inventory_external'],
+    'satellite' => ['inventory_satellite'],
+    'factory' => ['inventory_external', 'inventory_satellite', 'server_notes'],
+];
+if (($_POST['action'] ?? '') === 'reset_inventory') {
+    $target = $_POST['inventory_target'] ?? '';
+    if (!is_string($target) || !isset($inventoryResetTargets[$target]) || ($_POST['confirmation'] ?? '') !== 'RESET') {
+        header('Location: settings.php?inventory_reset=confirmation#inventory-data', true, 303);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $deleted = [];
+        foreach ($inventoryResetTargets[$target] as $table) {
+            $deleted[$table] = $pdo->exec('DELETE FROM ' . $table);
+        }
+        $pdo->commit();
+        audit_event('inventory.reset', ['target' => $target, 'deleted' => $deleted]);
+        $result = $target;
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Inventory reset failed: ' . $e->getMessage());
+        $result = 'failed';
+    }
+    header('Location: settings.php?' . http_build_query(['inventory_reset' => $result]) . '#inventory-data', true, 303);
+    exit;
+}
 
 // --- AZIONE: Aggiorna o ripristina nome Customer ---
 if (($_POST['action'] ?? '') === 'update_customer_name') {
@@ -235,10 +297,95 @@ $users = $pdo->query("SELECT id, username, role, created_at, last_password_reset
     </div>
 
 
-    <!-- ============================================================
-         SEZIONE 1: LISTA UTENTI
-         ============================================================ -->
-    <div class="settings-section">
+    <section class="settings-section" id="external-dashboard">
+        <div class="settings-section-header">
+            <h2 class="settings-section-title">External Inventory on Dashboard</h2>
+        </div>
+        <div class="settings-section-body">
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="hidden" name="action" value="save_external_dashboard">
+                <fieldset>
+                    <legend>Show comparison sections</legend>
+                    <?php foreach ($externalDashboardSections as $key => $label): ?>
+                        <label style="display:block;margin:8px 0">
+                            <input type="checkbox" name="external_sections[]" value="<?= htmlspecialchars($key) ?>"
+                                   <?= $externalDashboardVisibility[$key] ? 'checked' : '' ?>>
+                            <?= htmlspecialchars($label) ?>
+                        </label>
+                    <?php endforeach; ?>
+                </fieldset>
+                <button type="submit" class="btn-add-user" style="margin-top:12px">Save Dashboard Settings</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="settings-section" id="inventory-data">
+        <div class="settings-section-header">
+            <h2 class="settings-section-title">Inventory Data</h2>
+        </div>
+        <div class="settings-section-body">
+            <?php if (isset($_GET['import_success'])): ?>
+                <p role="status">Satellite import completed. <?= (int) $_GET['import_success'] ?> imported, <?= (int) ($_GET['import_skipped'] ?? 0) ?> skipped.</p>
+            <?php endif; ?>
+            <?php if (isset($_GET['external_success'])): ?>
+                <p role="status">External import completed. <?= (int) $_GET['external_success'] ?> imported, <?= (int) ($_GET['external_inserted'] ?? 0) ?> inserted, <?= (int) ($_GET['external_updated'] ?? 0) ?> updated, <?= (int) ($_GET['external_skipped'] ?? 0) ?> skipped.</p>
+            <?php endif; ?>
+            <?php if (($_GET['backup'] ?? '') === 'success'): ?>
+                <p role="status">Inventory and notes snapshot created.</p>
+            <?php endif; ?>
+            <?php
+            $resetLabels = ['external' => 'Reset External', 'satellite' => 'Reset Satellite', 'factory' => 'Factory Reset'];
+            $resetResult = $_GET['inventory_reset'] ?? '';
+            if (is_string($resetResult) && isset($resetLabels[$resetResult])):
+            ?>
+                <p role="status"><?= $resetLabels[$resetResult] ?> completed.</p>
+            <?php elseif ($resetResult === 'confirmation'): ?>
+                <p role="alert">Type RESET to confirm the operation.</p>
+            <?php elseif ($resetResult === 'failed'): ?>
+                <p role="alert">Inventory reset failed. Check the server log.</p>
+            <?php endif; ?>
+            <h3>Import Inventory</h3>
+            <?php foreach (['Satellite' => 'satellite', 'External' => 'external'] as $label => $source): ?>
+                <form action="import_<?= $source ?>.php" method="post" enctype="multipart/form-data" class="customer-logo-upload-form">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                    <label for="inventory-<?= $source ?>"><?= $label ?> CSV</label>
+                    <input id="inventory-<?= $source ?>" type="file" name="<?= $source ?>_csv" accept=".csv,text/csv" required>
+                    <button type="submit" class="btn-add-user">Import <?= $label ?> CSV</button>
+                </form>
+            <?php endforeach; ?>
+            <h3>Inventory Backups</h3>
+            <p>Create a snapshot of both inventories and server notes in PostgreSQL.</p>
+            <form action="backup_db.php" method="post">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <button type="submit" class="btn-add-user">Create Inventory Snapshot</button>
+            </form>
+            <h4>Recent Snapshots</h4>
+            <?php if ($recentInventoryBackups): ?>
+                <ul>
+                    <?php foreach ($recentInventoryBackups as $snapshot): ?>
+                        <?php $snapshotDate = DateTimeImmutable::createFromFormat('!Ymd_Hi', substr($snapshot, 10)); ?>
+                        <li><?= htmlspecialchars($snapshotDate ? $snapshotDate->format('Y-m-d H:i') : $snapshot) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p>No snapshots found.</p>
+            <?php endif; ?>
+            <h3>Reset Inventory Data</h3>
+            <p>Factory Reset deletes both inventories and server notes. Import history, backups, users, settings, and CSV files are preserved. Imports can repopulate cleared inventories.</p>
+            <?php foreach ($resetLabels as $target => $label): ?>
+                <form action="settings.php" method="post" class="customer-logo-upload-form">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                    <input type="hidden" name="action" value="reset_inventory">
+                    <input type="hidden" name="inventory_target" value="<?= $target ?>">
+                    <label for="reset-<?= $target ?>">Type RESET to confirm <?= $label ?></label>
+                    <input id="reset-<?= $target ?>" name="confirmation" required pattern="RESET" autocomplete="off">
+                    <button type="submit" class="btn-action btn-action-delete"><?= $label ?></button>
+                </form>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <div class="settings-section" id="user-accounts">
         <div class="settings-section-header">
             <div class="settings-section-title">👥 User Accounts</div>
             <span style="font-size:11px; color:var(--text-muted);"><?= count($users) ?> users registered</span>

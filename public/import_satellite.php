@@ -174,10 +174,10 @@ try {
             'run_id' => $runId,
             'snapshot_date' => $snapshotDate->format('Y-m-d'),
         ]);
-        header('Location: index.php?' . http_build_query([
+        header('Location: settings.php?' . http_build_query([
             'import_success' => $importCount,
             'import_skipped' => $skippedCount,
-        ]));
+        ]) . '#inventory-data', true, 303);
         exit;
     }
 

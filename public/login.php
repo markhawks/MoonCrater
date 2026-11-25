@@ -83,7 +83,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         <div class="brand-divider"></div>
 
         <p class="brand-description">
-            Unified patching visibility across Ivanti &amp; Red Hat Satellite inventories.
+            Unified patching visibility across External &amp; Red Hat Satellite inventories.
             Monitor agent health, track kernel versions, and manage host exclusions
             across your entire Linux infrastructure.
         </p>

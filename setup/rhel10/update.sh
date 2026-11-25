@@ -143,10 +143,12 @@ if [[ -d $install_dir/satellite-import-csv ]]; then
 else
     install -d -m 0750 "$stage_dir/satellite-import-csv"
 fi
-if [[ -d $install_dir/ivanti-import-csv ]]; then
-    cp -a "$install_dir/ivanti-import-csv" "$stage_dir/"
+if [[ -d $install_dir/external-import-csv ]]; then
+    cp -a "$install_dir/external-import-csv" "$stage_dir/"
+elif [[ -d $install_dir/ivanti-import-csv ]]; then
+    cp -a "$install_dir/ivanti-import-csv" "$stage_dir/external-import-csv"
 else
-    install -d -m 0750 "$stage_dir/ivanti-import-csv"
+    install -d -m 0750 "$stage_dir/external-import-csv"
 fi
 
 info 'Applying database migrations'
@@ -164,11 +166,11 @@ mv -- "$install_dir" "$previous_dir"
 files_swapped=yes
 mv -- "$stage_dir" "$install_dir"
 stage_dir=''
-semanage fcontext -a -t httpd_sys_content_t "${install_dir}/ivanti-import-csv(/.*)?" 2>/dev/null || \
-    semanage fcontext -m -t httpd_sys_content_t "${install_dir}/ivanti-import-csv(/.*)?"
-chown root:apache "$install_dir/ivanti-import-csv"
-chmod 0750 "$install_dir/ivanti-import-csv"
-restorecon -RF "$install_dir/public" "$install_dir/ivanti-import-csv"
+semanage fcontext -a -t httpd_sys_content_t "${install_dir}/external-import-csv(/.*)?" 2>/dev/null || \
+    semanage fcontext -m -t httpd_sys_content_t "${install_dir}/external-import-csv(/.*)?"
+chown root:apache "$install_dir/external-import-csv"
+chmod 0750 "$install_dir/external-import-csv"
+restorecon -RF "$install_dir/public" "$install_dir/external-import-csv"
 systemctl reload httpd
 MOONCRATER_INSTALL_DIR="$install_dir" "$install_dir/setup/rhel10/install-satellite-automation.sh"
 

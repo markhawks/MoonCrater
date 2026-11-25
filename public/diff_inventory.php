@@ -6,21 +6,22 @@ require_once __DIR__ . '/../app/Domain/inventory.php';
 require_once __DIR__ . '/../app/Domain/diff_inventory.php';
 require_login($pdo);
 
-$ivantiFile = diff_inventory_latest_csv(APP_ROOT . '/ivanti-import-csv', 'ivanti');
+$externalFile = diff_inventory_latest_csv(APP_ROOT . '/external-import-csv', '')
+    ?? diff_inventory_latest_csv(APP_ROOT . '/ivanti-import-csv', '');
 $satelliteFile = diff_inventory_latest_csv(APP_ROOT . '/satellite-import-csv', 'satellite');
 $error = '';
-$ivanti = ['rows' => [], 'duplicates' => 0, 'invalid' => 0, 'has_scan_date' => false];
+$external = ['rows' => [], 'duplicates' => 0, 'invalid' => 0, 'has_scan_date' => false];
 $satellite = [];
 $satelliteSnapshotDate = null;
 try {
-    if ($ivantiFile === null) throw new RuntimeException('No Ivanti CSV available in ivanti-import-csv.');
+    if ($externalFile === null) throw new RuntimeException('No External inventory CSV is configured for comparison.');
     if ($satelliteFile === null) throw new RuntimeException('No Satellite CSV available in satellite-import-csv.');
-    $ivanti = diff_inventory_read_ivanti($ivantiFile);
-    if (!$ivanti['has_scan_date']) {
-        $extractionDate = diff_inventory_date_from_filename($ivantiFile);
+    $external = diff_inventory_read_external($externalFile);
+    if (!$external['has_scan_date']) {
+        $extractionDate = diff_inventory_date_from_filename($externalFile);
         if ($extractionDate) {
-            foreach ($ivanti['rows'] as &$ivantiRow) $ivantiRow['scan_date'] = $extractionDate->format('d/m/Y');
-            unset($ivantiRow);
+            foreach ($external['rows'] as &$externalRow) $externalRow['scan_date'] = $extractionDate->format('d/m/Y');
+            unset($externalRow);
         }
     }
     $satellite = diff_inventory_read_satellite($satelliteFile);
@@ -29,22 +30,22 @@ try {
     $error = $exception->getMessage();
 }
 
-$keys = array_unique(array_merge(array_keys($ivanti['rows']), array_keys($satellite)));
+$keys = array_unique(array_merge(array_keys($external['rows']), array_keys($satellite)));
 sort($keys, SORT_NATURAL | SORT_FLAG_CASE);
 $familyOrder = ['Red Hat Enterprise Linux', 'Oracle Linux', 'SUSE Linux', 'Ubuntu', 'CentOS', 'Retired', 'Unknown'];
 $groups = array_fill_keys($familyOrder, []);
-$matched = $ivantiOnly = $satelliteOnly = 0;
+$matched = $externalOnly = $satelliteOnly = 0;
 $rhelAnomalies = [];
 foreach ($keys as $key) {
-    $iv = $ivanti['rows'][$key] ?? null;
+    $iv = $external['rows'][$key] ?? null;
     $sat = $satellite[$key] ?? null;
     if ($iv && $sat) $matched++;
-    elseif ($iv) $ivantiOnly++;
+    elseif ($iv) $externalOnly++;
     else $satelliteOnly++;
     $classification = diff_inventory_os((string) (($iv['os'] ?? null) ?: ($sat['os'] ?? '')));
-    $groups[$classification['family']][] = ['ivanti' => $iv, 'satellite' => $sat, 'version' => $classification['version']];
+    $groups[$classification['family']][] = ['external' => $iv, 'satellite' => $sat, 'version' => $classification['version']];
     $anomaly = diff_inventory_rhel_anomaly($iv, $sat, $satelliteSnapshotDate);
-    if ($anomaly) $rhelAnomalies[] = ['ivanti' => $iv, 'satellite' => $sat] + $anomaly;
+    if ($anomaly) $rhelAnomalies[] = ['external' => $iv, 'satellite' => $sat] + $anomaly;
 }
 $colors = [
     'Red Hat Enterprise Linux' => '#e74c3c', 'Oracle Linux' => '#c74634', 'SUSE Linux' => '#30ba78',
@@ -52,9 +53,9 @@ $colors = [
 ];
 $anomalyReasonOrder = [
     'Satellite check-in older than 30 days',
-    'Ivanti only',
+    'External only',
     'Satellite only',
-    'Retired in Ivanti but still present in Satellite',
+    'Retired in External but still present in Satellite',
 ];
 $anomalyReasonCounts = array_fill_keys($anomalyReasonOrder, 0);
 foreach ($rhelAnomalies as $anomaly) {
@@ -72,28 +73,28 @@ foreach ($rhelAnomalies as $anomaly) {
 <style>
 body{background:#1a252f;color:#e5e8e8;font-family:Segoe UI,Tahoma,sans-serif;margin:0;padding:20px}.container{max-width:1900px;margin:auto}.header-panel{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,.05)}.btn-back{background-color:rgba(255,255,255,.1);color:#fff;padding:8px 15px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:.9em;transition:background .2s}.btn-back:hover{background-color:rgba(255,255,255,.2)}.source,.notice,.summary-card,.os-card,.anomaly-card{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:8px}.source,.notice{padding:12px 15px;margin-bottom:14px}.notice{border-color:#b9770e;background:rgba(185,119,14,.16);color:#f8c471}.error{border-color:#922b21;background:rgba(146,43,33,.22);color:#f5b7b1}.summary{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:12px;margin-bottom:18px}.summary-card{padding:14px}.summary-card span{display:block;color:#85929e;text-transform:uppercase;font-size:10px;font-weight:700;letter-spacing:.5px}.summary-card strong{font-size:28px}.os-grid{display:grid;grid-template-columns:1fr;gap:18px}.os-card{border-top:3px solid var(--accent);overflow:hidden}.os-head{padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:15px;flex-wrap:wrap}.os-head h2{margin:0;color:var(--accent)}.badges{display:flex;gap:7px;flex-wrap:wrap}.badge{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:4px 9px;font-size:11px}.table-wrap{overflow:auto;max-height:520px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:9px 10px;border-top:1px solid rgba(255,255,255,.07);white-space:nowrap;text-align:left}thead th{position:sticky;top:0;background:#243442;color:#abb2b9;z-index:2}.group-head{text-align:center;color:#fff;background:#2c3e50}.sort-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;padding:0;cursor:pointer}.sort-button:hover,.sort-button:focus{color:#fff}.sort-arrow{display:inline-block;width:12px;color:#5dade2}.missing{color:#7f8c8d}.iv-only{box-shadow:inset 4px 0 #f39c12}.sat-only{box-shadow:inset 4px 0 #3498db}.stale-checkin td{background:rgba(255,255,0,.20);border-top-color:rgba(255,255,0,.52)}.stale-checkin td:last-child{color:#ffff66;font-weight:800}.satellite-head,table th:nth-child(4),table td:nth-child(4){border-left:3px solid rgba(93,173,226,.8)}.match-label{display:block;font-size:9px;text-transform:uppercase;color:#7f8c8d;margin-top:2px}.muted{color:#95a5a6;font-size:12px}.anomaly-card{margin-top:24px;border-top:3px solid #ffff00;overflow:hidden}.anomaly-head{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;padding:16px}.anomaly-head h2{margin:0;color:#ffff66}.actions{display:flex;gap:8px;flex-wrap:wrap}.action-button{border:1px solid rgba(255,255,255,.16);border-radius:5px;background:#34495e;color:#fff;padding:8px 12px;font-weight:700;cursor:pointer}.action-button.primary{background:#2471a3}.copy-status{color:#58d68d;font-size:12px}.anomaly-card .table-wrap{max-height:none}.anomaly-card td{white-space:normal;vertical-align:top}.anomaly-reason{color:#ffff66;font-weight:700}@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}}
 </style><style>.anomaly-card table th:nth-child(4),.anomaly-card table td:nth-child(4){border-left:0}</style></head><body><main class="container">
-<header class="header-panel"><div><h1 style="margin:0;font-size:1.8em;color:#fff">Diff Inventory View</h1><p style="margin:5px 0 0;color:#7f8c8d;font-size:.95em">Alphabetical comparison between the Ivanti inventory and Satellite snapshot</p></div><div><a class="btn-back" href="index.php">⬅️ Back to Dashboard</a></div></header>
+<header class="header-panel"><div><h1 style="margin:0;font-size:1.8em;color:#fff">Diff Inventory View</h1><p style="margin:5px 0 0;color:#7f8c8d;font-size:.95em">Alphabetical comparison between the External inventory and Satellite snapshot</p></div><div><a class="btn-back" href="index.php">⬅️ Back to Dashboard</a></div></header>
 <?php if ($error !== ''): ?><div class="notice error"><?= h($error) ?></div><?php else: ?>
-<div class="source"><strong>Sources:</strong> Ivanti <?= h(basename((string) $ivantiFile)) ?> · Satellite <?= h(basename((string) $satelliteFile)) ?><span style="float:right;color:#ffff66">■ Last check-in older than 30 days</span></div>
-<?php if (!$ivanti['has_scan_date']): ?><div class="notice"><strong>Scan Date is not present in the CSV:</strong> all hosts use the extraction date <?= h(diff_inventory_date_from_filename((string) $ivantiFile)?->format('d/m/Y') ?? 'N/A') ?> derived from the filename.</div><?php endif; ?>
-<?php if ($ivanti['duplicates'] || $ivanti['invalid']): ?><div class="notice"><?= (int) $ivanti['duplicates'] ?> duplicate hostnames consolidated; <?= (int) $ivanti['invalid'] ?> invalid rows ignored.</div><?php endif; ?>
+<div class="source"><strong>Sources:</strong> External <?= h(basename((string) $externalFile)) ?> · Satellite <?= h(basename((string) $satelliteFile)) ?><span style="float:right;color:#ffff66">■ Last check-in older than 30 days</span></div>
+<?php if (!$external['has_scan_date']): ?><div class="notice"><strong>Scan Date is not present in the CSV:</strong> all hosts use the extraction date <?= h(diff_inventory_date_from_filename((string) $externalFile)?->format('d/m/Y') ?? 'N/A') ?> derived from the filename.</div><?php endif; ?>
+<?php if ($external['duplicates'] || $external['invalid']): ?><div class="notice"><?= (int) $external['duplicates'] ?> duplicate hostnames consolidated; <?= (int) $external['invalid'] ?> invalid rows ignored.</div><?php endif; ?>
 <section class="summary">
-<?php foreach ([['Ivanti',count($ivanti['rows'])],['Satellite',count($satellite)],['Matched',$matched],['Ivanti only',$ivantiOnly],['Satellite only',$satelliteOnly]] as [$label,$value]): ?>
+<?php foreach ([['External',count($external['rows'])],['Satellite',count($satellite)],['Matched',$matched],['External only',$externalOnly],['Satellite only',$satelliteOnly]] as [$label,$value]): ?>
 <div class="summary-card"><span><?= h($label) ?></span><strong><?= (int) $value ?></strong></div><?php endforeach; ?>
 </section>
 <section class="os-grid">
-<?php foreach ($familyOrder as $family): $rows = $groups[$family]; if (!$rows) continue; $versions=[]; $familyIvantiTotal=0; $familySatelliteTotal=0; $familyCheckinAnomalies=0; foreach($rows as $row){$v=$row['version'];$versions[$v]=($versions[$v]??0)+1;if($row['ivanti'])$familyIvantiTotal++;if($row['satellite'])$familySatelliteTotal++;if($row['satellite']&&$satelliteSnapshotDate&&diff_inventory_checkin_is_stale($row['satellite']['last_checkin'],$satelliteSnapshotDate))$familyCheckinAnomalies++;} uksort($versions,'version_compare'); ?>
-<article class="os-card" style="--accent:<?= h($colors[$family]) ?>"><div class="os-head"><div><h2><?= h($family) ?></h2><div class="muted">Total Ivanti Hosts: <strong><?= $familyIvantiTotal ?></strong> &nbsp;·&nbsp; Total Satellite Hosts: <strong><?= $familySatelliteTotal ?></strong> &nbsp;·&nbsp; <span style="color:#ffff66">Check-in Anomalies &gt;30d: <strong><?= $familyCheckinAnomalies ?></strong></span></div></div><div class="badges"><?php foreach($versions as $version=>$count): ?><span class="badge"><?= h($version) ?>: <strong><?= $count ?></strong></span><?php endforeach; ?></div></div>
-<div class="table-wrap"><table class="sortable-table"><thead><tr><th class="group-head" colspan="3">IVANTI</th><th class="group-head satellite-head" colspan="5">SATELLITE</th></tr><tr><th><button class="sort-button" type="button" data-column="0">Hostname <span class="sort-arrow">↕</span></button></th><th><button class="sort-button" type="button" data-column="1">OS <span class="sort-arrow">↕</span></button></th><th>Scan Date</th><th><button class="sort-button" type="button" data-column="3">Hostname <span class="sort-arrow">↕</span></button></th><th><button class="sort-button" type="button" data-column="4">OS <span class="sort-arrow">↕</span></button></th><th>CV / ENV</th><th>Location</th><th>Last Check-in</th></tr></thead><tbody>
-<?php foreach($rows as $row): $iv=$row['ivanti'];$sat=$row['satellite'];$class=$iv&&$sat?'':($iv?'iv-only':'sat-only');if($sat&&$satelliteSnapshotDate&&diff_inventory_checkin_is_stale($sat['last_checkin'],$satelliteSnapshotDate))$class=trim($class.' stale-checkin'); ?>
-<tr class="<?= $class ?>"><td data-sort-value="<?= h($iv['hostname']??'') ?>" class="<?= $iv?'':'missing' ?>"><?= h($iv['hostname']??'N/A') ?><?php if($iv&&!$sat):?><small class="match-label">Ivanti only</small><?php endif;?></td><td data-sort-value="<?= h($iv['os']??'') ?>" class="<?= $iv?'':'missing' ?>"><?= h($iv['os']??'N/A') ?></td><td class="<?= $iv?'':'missing' ?>"><?= h($iv['scan_date']??'N/A') ?></td><td data-sort-value="<?= h($sat['hostname']??'') ?>" class="<?= $sat?'':'missing' ?>"><?= h($sat['hostname']??'N/A') ?><?php if($sat&&!$iv):?><small class="match-label">Satellite only</small><?php endif;?></td><td data-sort-value="<?= h($sat['os']??'') ?>" class="<?= $sat?'':'missing' ?>"><?= h($sat['os']??'N/A') ?></td><td class="<?= $sat?'':'missing' ?>"><?= h($sat['cv_env']??'N/A') ?></td><td class="<?= $sat?'':'missing' ?>"><?= h($sat['location']??'N/A') ?></td><td class="<?= $sat?'':'missing' ?>"><?= h($sat['last_checkin']??'N/A') ?></td></tr>
+<?php foreach ($familyOrder as $family): $rows = $groups[$family]; if (!$rows) continue; $versions=[]; $familyExternalTotal=0; $familySatelliteTotal=0; $familyCheckinAnomalies=0; foreach($rows as $row){$v=$row['version'];$versions[$v]=($versions[$v]??0)+1;if($row['external'])$familyExternalTotal++;if($row['satellite'])$familySatelliteTotal++;if($row['satellite']&&$satelliteSnapshotDate&&diff_inventory_checkin_is_stale($row['satellite']['last_checkin'],$satelliteSnapshotDate))$familyCheckinAnomalies++;} uksort($versions,'version_compare'); ?>
+<article class="os-card" style="--accent:<?= h($colors[$family]) ?>"><div class="os-head"><div><h2><?= h($family) ?></h2><div class="muted">Total External Hosts: <strong><?= $familyExternalTotal ?></strong> &nbsp;·&nbsp; Total Satellite Hosts: <strong><?= $familySatelliteTotal ?></strong> &nbsp;·&nbsp; <span style="color:#ffff66">Check-in Anomalies &gt;30d: <strong><?= $familyCheckinAnomalies ?></strong></span></div></div><div class="badges"><?php foreach($versions as $version=>$count): ?><span class="badge"><?= h($version) ?>: <strong><?= $count ?></strong></span><?php endforeach; ?></div></div>
+<div class="table-wrap"><table class="sortable-table"><thead><tr><th class="group-head" colspan="3">EXTERNAL</th><th class="group-head satellite-head" colspan="5">SATELLITE</th></tr><tr><th><button class="sort-button" type="button" data-column="0">Hostname <span class="sort-arrow">↕</span></button></th><th><button class="sort-button" type="button" data-column="1">OS <span class="sort-arrow">↕</span></button></th><th>Scan Date</th><th><button class="sort-button" type="button" data-column="3">Hostname <span class="sort-arrow">↕</span></button></th><th><button class="sort-button" type="button" data-column="4">OS <span class="sort-arrow">↕</span></button></th><th>CV / ENV</th><th>Location</th><th>Last Check-in</th></tr></thead><tbody>
+<?php foreach($rows as $row): $iv=$row['external'];$sat=$row['satellite'];$class=$iv&&$sat?'':($iv?'iv-only':'sat-only');if($sat&&$satelliteSnapshotDate&&diff_inventory_checkin_is_stale($sat['last_checkin'],$satelliteSnapshotDate))$class=trim($class.' stale-checkin'); ?>
+<tr class="<?= $class ?>"><td data-sort-value="<?= h($iv['hostname']??'') ?>" class="<?= $iv?'':'missing' ?>"><?= h($iv['hostname']??'N/A') ?><?php if($iv&&!$sat):?><small class="match-label">External only</small><?php endif;?></td><td data-sort-value="<?= h($iv['os']??'') ?>" class="<?= $iv?'':'missing' ?>"><?= h($iv['os']??'N/A') ?></td><td class="<?= $iv?'':'missing' ?>"><?= h($iv['scan_date']??'N/A') ?></td><td data-sort-value="<?= h($sat['hostname']??'') ?>" class="<?= $sat?'':'missing' ?>"><?= h($sat['hostname']??'N/A') ?><?php if($sat&&!$iv):?><small class="match-label">Satellite only</small><?php endif;?></td><td data-sort-value="<?= h($sat['os']??'') ?>" class="<?= $sat?'':'missing' ?>"><?= h($sat['os']??'N/A') ?></td><td class="<?= $sat?'':'missing' ?>"><?= h($sat['cv_env']??'N/A') ?></td><td class="<?= $sat?'':'missing' ?>"><?= h($sat['location']??'N/A') ?></td><td class="<?= $sat?'':'missing' ?>"><?= h($sat['last_checkin']??'N/A') ?></td></tr>
 <?php endforeach; ?></tbody></table></div></article>
 <?php endforeach; ?>
 </section>
 <section class="anomaly-card">
 <div class="anomaly-head"><div><h2>RHEL Anomalies for Verification</h2><div class="muted"><strong><?= count($rhelAnomalies) ?></strong> hosts to verify for shutdown, decommissioning, inventory cleanup, or Satellite agent failure</div><div class="badges" style="margin-top:9px"><?php foreach($anomalyReasonCounts as $reason=>$count): ?><span class="badge"><?= h($reason) ?>: <strong><?= $count ?></strong></span><?php endforeach; ?></div></div><div class="actions"><span id="anomaly-copy-status" class="copy-status" role="status"></span><button type="button" class="action-button primary" onclick="copyAnomalyTable()">Copy for Email</button><button type="button" class="action-button" onclick="exportAnomalyExcel()">Export Excel</button><button type="button" class="action-button" onclick="exportAnomalyCsv()">Export CSV</button></div></div>
-<div class="table-wrap"><table id="rhel-anomaly-table" class="sortable-table" data-renumber="true"><thead><tr><th>#</th><th>Hostname</th><th><button class="sort-button" type="button" data-column="2">Anomaly <span class="sort-arrow">↕</span></button></th><th>Ivanti OS</th><th>Ivanti Scan Date</th><th>Satellite OS</th><th>CV / ENV</th><th>Location</th><th>Last Check-in</th><th>Recommended Check</th></tr></thead><tbody>
-<?php $anomalyNumber=1; foreach($rhelAnomalies as $anomaly): $iv=$anomaly['ivanti'];$sat=$anomaly['satellite'];$anomalyText=implode('; ', $anomaly['reasons']); ?>
+<div class="table-wrap"><table id="rhel-anomaly-table" class="sortable-table" data-renumber="true"><thead><tr><th>#</th><th>Hostname</th><th><button class="sort-button" type="button" data-column="2">Anomaly <span class="sort-arrow">↕</span></button></th><th>External OS</th><th>External Scan Date</th><th>Satellite OS</th><th>CV / ENV</th><th>Location</th><th>Last Check-in</th><th>Recommended Check</th></tr></thead><tbody>
+<?php $anomalyNumber=1; foreach($rhelAnomalies as $anomaly): $iv=$anomaly['external'];$sat=$anomaly['satellite'];$anomalyText=implode('; ', $anomaly['reasons']); ?>
 <tr><td><?= $anomalyNumber++ ?></td><td><?= h($anomaly['hostname']) ?></td><td data-sort-value="<?= h($anomalyText) ?>" class="anomaly-reason"><?= h($anomalyText) ?></td><td><?= h($iv['os']??'N/A') ?></td><td><?= h($iv['scan_date']??'N/A') ?></td><td><?= h($sat['os']??'N/A') ?></td><td><?= h($sat['cv_env']??'N/A') ?></td><td><?= h($sat['location']??'N/A') ?></td><td><?= h($sat['last_checkin']??'N/A') ?></td><td><?= h(implode('; ', $anomaly['actions'])) ?></td></tr>
 <?php endforeach; ?>
 <?php if(!$rhelAnomalies): ?><tr><td colspan="10" class="muted">No RHEL anomalies found.</td></tr><?php endif; ?>
@@ -194,7 +195,7 @@ function exportAnomalyExcel() {
         const anomaly = row[2] || '';
         let style = 'Cell';
         if (anomaly.includes('older than 30 days')) style = 'Stale';
-        else if (anomaly.includes('Ivanti only')) style = 'IvantiOnly';
+        else if (anomaly.includes('External only')) style = 'ExternalOnly';
         else if (anomaly.includes('Satellite only')) style = 'SatelliteOnly';
         else if (anomaly.includes('Retired')) style = 'Retired';
         return '<Row ss:AutoFitHeight="1">' + row.map((value, columnIndex) => excelCell(value, columnIndex === 2 ? style : 'Cell')).join('') + '</Row>';
@@ -212,7 +213,7 @@ function exportAnomalyExcel() {
         '<Style ss:ID="SummaryTotalLabel" ss:Parent="SummaryLabel"><Font ss:Size="13" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E78" ss:Pattern="Solid"/></Style>' +
         '<Style ss:ID="SummaryTotalValue" ss:Parent="SummaryValue"><Font ss:Size="13" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E78" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>' +
         '<Style ss:ID="Stale" ss:Parent="Cell"><Font ss:Bold="1"/><Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/></Style>' +
-        '<Style ss:ID="IvantiOnly" ss:Parent="Cell"><Font ss:Bold="1" ss:Color="#9C5700"/><Interior ss:Color="#FCE4D6" ss:Pattern="Solid"/></Style>' +
+        '<Style ss:ID="ExternalOnly" ss:Parent="Cell"><Font ss:Bold="1" ss:Color="#9C5700"/><Interior ss:Color="#FCE4D6" ss:Pattern="Solid"/></Style>' +
         '<Style ss:ID="SatelliteOnly" ss:Parent="Cell"><Font ss:Bold="1" ss:Color="#1F4E78"/><Interior ss:Color="#DDEBF7" ss:Pattern="Solid"/></Style>' +
         '<Style ss:ID="Retired" ss:Parent="Cell"><Font ss:Bold="1" ss:Color="#9C0006"/><Interior ss:Color="#FFC7CE" ss:Pattern="Solid"/></Style>' +
         '</Styles>' +

@@ -16,25 +16,25 @@ if ($isCli) require_once __DIR__ . '/../app/Domain/inventory.php';
 if ($isCli) {
     $file = $argv[1] ?? '';
     if ($file === '' || !is_file($file) || !is_readable($file)) {
-        fwrite(STDERR, "Usage: public/import_ivanti.php /path/to/ivanti.csv\n");
+        fwrite(STDERR, "Usage: public/import_external.php /path/to/external.csv\n");
         exit(1);
     }
 } else {
-    $upload = $_FILES['ivanti_csv'] ?? [];
+    $upload = $_FILES['external_csv'] ?? [];
     if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
         || ($upload['size'] ?? 0) <= 0
         || ($upload['size'] ?? 0) > 10 * 1024 * 1024
         || !is_uploaded_file($upload['tmp_name'] ?? '')) {
         http_response_code(400);
-        exit("Invalid Ivanti upload.\n");
+        exit("Invalid External upload.\n");
     }
     $file = $upload['tmp_name'];
 }
-$sourceFilename = $isCli ? basename($file) : basename((string) ($upload['name'] ?? 'ivanti.csv'));
+$sourceFilename = $isCli ? basename($file) : basename((string) ($upload['name'] ?? 'external.csv'));
 $handle = fopen($file, 'rb');
 if ($handle === false) {
     http_response_code(400);
-    exit("Cannot open Ivanti CSV.\n");
+    exit("Cannot open External CSV.\n");
 }
 
 try {
@@ -53,8 +53,8 @@ try {
 
     $aliases = [
         'hostname' => ['device_name', 'hostname'],
-        'os' => ['os_name', 'os'],
-        'ip' => ['address', 'ip'],
+        'os' => ['os_name', 'os', 'operating_system', 'oslfabetico'],
+        'ip' => ['address', 'ip', 'ip_address'],
         'scan_date' => ['last_hardware_scan_date', 'scan_date'],
     ];
     $resolved = [];
@@ -65,21 +65,21 @@ try {
                 break;
             }
         }
-        if (!array_key_exists($target, $resolved)) {
-            throw new RuntimeException("Missing Ivanti CSV column for: {$target}");
+        if (in_array($target, ['hostname', 'os'], true) && !array_key_exists($target, $resolved)) {
+            throw new RuntimeException("Missing External CSV column for: {$target}");
         }
     }
 
     $pdo->beginTransaction();
     $updateStmt = $pdo->prepare("
-        UPDATE inventory_ivanti
+        UPDATE inventory_external
         SET hostname = ?, os = ?, ip = ?, scan_date = ?,
             status = CASE WHEN status IN ('excluded', 'decommissioned') THEN status ELSE 'active' END
         WHERE LOWER(TRIM(hostname)) = ?
         RETURNING id
     ");
     $insertStmt = $pdo->prepare("
-        INSERT INTO inventory_ivanti (hostname, os, ip, scan_date, status)
+        INSERT INTO inventory_external (hostname, os, ip, scan_date, status)
         VALUES (?, ?, ?, ?, 'active')
     ");
 
@@ -99,14 +99,14 @@ try {
         $scanDate = DateTimeImmutable::createFromFormat('!d/m/Y H:i', $scanDateRaw)
             ?: DateTimeImmutable::createFromFormat('!d/m/Y H:i:s', $scanDateRaw);
         $dateErrors = DateTimeImmutable::getLastErrors();
-        if (!$scanDate || (is_array($dateErrors) && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0))) {
+        if ($scanDateRaw !== '' && (!$scanDate || (is_array($dateErrors) && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)))) {
             $skippedCount++;
             continue;
         }
 
         $os = trim((string) ($data[$resolved['os']] ?? '')) ?: 'N/A';
         $ip = trim((string) ($data[$resolved['ip']] ?? '')) ?: 'N/A';
-        $scanDateValue = $scanDate->format('d/m/Y H:i');
+        $scanDateValue = $scanDate ? $scanDate->format('d/m/Y H:i') : null;
         $updateStmt->execute([$hostname, $os, $ip, $scanDateValue, $hostname]);
         if ($updateStmt->fetchColumn() !== false) {
             $updatedCount++;
@@ -119,7 +119,7 @@ try {
     }
 
     $runStmt = $pdo->prepare("
-        INSERT INTO ivanti_import_runs
+        INSERT INTO external_import_runs
             (source_filename, imported_count, inserted_count, updated_count, skipped_count)
         VALUES (?, ?, ?, ?, ?)
     ");
@@ -128,19 +128,19 @@ try {
     fclose($handle);
 
     if (!$isCli) {
-        audit_event('ivanti.import', [
+        audit_event('external.import', [
             'source_filename' => $sourceFilename,
             'imported' => $importedCount,
             'inserted' => $insertedCount,
             'updated' => $updatedCount,
             'skipped' => $skippedCount,
         ]);
-        header('Location: index.php?' . http_build_query([
-            'ivanti_success' => $importedCount,
-            'ivanti_inserted' => $insertedCount,
-            'ivanti_updated' => $updatedCount,
-            'ivanti_skipped' => $skippedCount,
-        ]));
+        header('Location: settings.php?' . http_build_query([
+            'external_success' => $importedCount,
+            'external_inserted' => $insertedCount,
+            'external_updated' => $updatedCount,
+            'external_skipped' => $skippedCount,
+        ]) . '#inventory-data', true, 303);
         exit;
     }
 
@@ -148,9 +148,9 @@ try {
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     if (is_resource($handle)) fclose($handle);
-    error_log('Ivanti import failed: ' . $e->getMessage());
+    error_log('External import failed: ' . $e->getMessage());
     http_response_code(500);
-    $message = "Ivanti import failed. See server log.\n";
+    $message = "External import failed. See server log.\n";
     if ($isCli) fwrite(STDERR, $message); else echo $message;
     exit(1);
 }

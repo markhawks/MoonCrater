@@ -3,6 +3,9 @@
 This directory contains the dedicated installer for a new Red Hat Enterprise Linux 10 server.
 It is intentionally separate from the generic file-copy installer in `setup/install.sh`.
 
+The installer accepts RHEL 10.x, including 10.2 and 10.3. RHEL 10.3 is the baseline for
+development and production. The target server needs access to its enabled RHEL package repositories.
+
 Run it from a cloned MoonCrater repository:
 
 ```bash

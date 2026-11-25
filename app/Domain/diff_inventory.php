@@ -46,24 +46,24 @@ function diff_inventory_os(string $raw): array
     return ['family' => 'Unknown', 'version' => 'Unknown'];
 }
 
-function diff_inventory_read_ivanti(string $file): array
+function diff_inventory_read_external(string $file): array
 {
     $handle = fopen($file, 'rb');
-    if ($handle === false) throw new RuntimeException('Cannot open Ivanti CSV');
+    if ($handle === false) throw new RuntimeException('Cannot open External CSV');
     try {
         $first = fgets($handle);
-        if ($first === false) throw new RuntimeException('Empty Ivanti CSV');
+        if ($first === false) throw new RuntimeException('Empty External CSV');
         $delimiter = substr_count($first, ';') >= substr_count($first, ',') ? ';' : ',';
         rewind($handle);
         $header = fgetcsv($handle, 65536, $delimiter, '"', '\\');
-        if (!is_array($header)) throw new RuntimeException('Missing Ivanti header');
+        if (!is_array($header)) throw new RuntimeException('Missing External header');
         $columns = array_flip(array_map('diff_inventory_header_key', $header));
         $hostnameColumn = diff_inventory_find_column($columns, ['device_name', 'hostname', 'host_name']);
         $osColumn = diff_inventory_find_column($columns, ['os_name', 'os', 'operating_system', 'oslfabetico']);
         $scanColumn = diff_inventory_find_column($columns, ['last_hardware_scan_date', 'scan_date', 'last_scan_date']);
         if ($hostnameColumn === null) $hostnameColumn = 0;
         if ($osColumn === null && count($header) >= 2) $osColumn = 1;
-        if ($osColumn === null) throw new RuntimeException('Ivanti OS column not found');
+        if ($osColumn === null) throw new RuntimeException('External OS column not found');
 
         $rows = [];
         $duplicates = 0;
@@ -151,37 +151,37 @@ function diff_inventory_checkin_is_stale(
 }
 
 function diff_inventory_rhel_anomaly(
-    ?array $ivanti,
+    ?array $external,
     ?array $satellite,
     ?DateTimeImmutable $snapshotDate
 ): ?array {
-    $ivantiFamily = diff_inventory_os((string) ($ivanti['os'] ?? ''))['family'];
+    $externalFamily = diff_inventory_os((string) ($external['os'] ?? ''))['family'];
     $satelliteFamily = diff_inventory_os((string) ($satellite['os'] ?? ''))['family'];
-    $isRhel = $ivantiFamily === 'Red Hat Enterprise Linux' || $satelliteFamily === 'Red Hat Enterprise Linux';
+    $isRhel = $externalFamily === 'Red Hat Enterprise Linux' || $satelliteFamily === 'Red Hat Enterprise Linux';
     if (!$isRhel) return null;
 
     $reasons = [];
     $actions = [];
-    if ($ivanti && !$satellite) {
-        $reasons[] = 'Ivanti only';
+    if ($external && !$satellite) {
+        $reasons[] = 'External only';
         $actions[] = 'Verify shutdown/decommissioning and Satellite registration';
     }
-    if ($satellite && !$ivanti) {
+    if ($satellite && !$external) {
         $reasons[] = 'Satellite only';
-        $actions[] = 'Verify Ivanti inventory inclusion or remove the invalid Satellite host';
+        $actions[] = 'Verify External inventory inclusion or remove the invalid Satellite host';
     }
     if ($satellite && $snapshotDate && diff_inventory_checkin_is_stale($satellite['last_checkin'] ?? null, $snapshotDate)) {
         $reasons[] = 'Satellite check-in older than 30 days';
         $actions[] = 'Verify server power and agent; clean Satellite if decommissioned';
     }
-    if ($ivantiFamily === 'Retired' && $satelliteFamily === 'Red Hat Enterprise Linux') {
-        $reasons[] = 'Retired in Ivanti but still present in Satellite';
+    if ($externalFamily === 'Retired' && $satelliteFamily === 'Red Hat Enterprise Linux') {
+        $reasons[] = 'Retired in External but still present in Satellite';
         $actions[] = 'Confirm decommissioning, power off, and remove the Satellite host';
     }
     if (!$reasons) return null;
 
     return [
-        'hostname' => (string) (($ivanti['hostname'] ?? null) ?: ($satellite['hostname'] ?? 'N/A')),
+        'hostname' => (string) (($external['hostname'] ?? null) ?: ($satellite['hostname'] ?? 'N/A')),
         'reasons' => array_values(array_unique($reasons)),
         'actions' => array_values(array_unique($actions)),
     ];

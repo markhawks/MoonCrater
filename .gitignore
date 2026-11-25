@@ -4,9 +4,10 @@ var/*
 !var/.gitkeep
 csv/*.csv
 satellite-import-csv/*.csv
-ivanti-import-csv/*.csv
+external-import-csv/*.csv
 zabbix-import-csv/*.csv
 .idea/
 .vscode/
 .DS_Store
 SESSION_HANDOFF.md
+ivanti-import-csv/*.csv

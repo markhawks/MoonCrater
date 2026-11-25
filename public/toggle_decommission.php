@@ -13,7 +13,7 @@ if (!is_valid_hostname($hostname)) {
 }
 
 try {
-    $stmt = $pdo->prepare('SELECT status FROM inventory_ivanti WHERE hostname = ?');
+    $stmt = $pdo->prepare('SELECT status FROM inventory_external WHERE hostname = ?');
     $stmt->execute([$hostname]);
     $currentStatus = $stmt->fetchColumn();
     if ($currentStatus === false) {
@@ -28,7 +28,7 @@ try {
 
     $newStatus = $currentStatus === 'excluded' ? 'active' : 'excluded';
     $pdo->beginTransaction();
-    $stmt = $pdo->prepare('UPDATE inventory_ivanti SET status = ? WHERE hostname = ?');
+    $stmt = $pdo->prepare('UPDATE inventory_external SET status = ? WHERE hostname = ?');
     $stmt->execute([$newStatus, $hostname]);
     $stmt = $pdo->prepare('UPDATE inventory_satellite SET status = ? WHERE hostname = ?');
     $stmt->execute([$newStatus, $hostname]);

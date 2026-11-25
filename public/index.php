@@ -8,20 +8,20 @@ require_once __DIR__ . '/../app/Domain/inventory.php';
 // Forziamo la timezone corretta
 date_default_timezone_set('Europe/Rome');
 
-$last_ivanti_import = "Never / No Data";
+$last_external_import = "Never / No Data";
 
 try {
     // Interroghiamo il DB convertendo la stringa scan_date nel formato corretto
-    $stmt_ivanti = $pdo->query("SELECT MAX(to_timestamp(scan_date, 'DD/MM/YYYY HH24:MI')) FROM inventory_ivanti");
-    $db_date_ivanti = $stmt_ivanti->fetchColumn();
+    $stmt_external = $pdo->query("SELECT MAX(to_timestamp(scan_date, 'DD/MM/YYYY HH24:MI')) FROM inventory_external");
+    $db_date_external = $stmt_external->fetchColumn();
 
-    if ($db_date_ivanti) {
+    if ($db_date_external) {
         // Formattiamo la data nel formato internazionale YYYY-MM-DD
-        $last_ivanti_import = date("Y-m-d", strtotime($db_date_ivanti));
+        $last_external_import = date("Y-m-d", strtotime($db_date_external));
     }
 } catch (Exception $e) {
     // Se la tabella è vuota o la colonna non corrisponde, gestisce l'errore senza rompere la pagina
-    $last_ivanti_import = "Error / No Data";
+    $last_external_import = "Error / No Data";
 }
 
 
@@ -63,8 +63,8 @@ $filter_os = $_GET['os'] ?? 'all';
 $filter_search = $_GET['search'] ?? '';
 
 // --- 1. CARICAMENTO DATI ---
-$ivanti_rows = $pdo->query("SELECT hostname, os, ip, scan_date, status FROM inventory_ivanti ORDER BY hostname")->fetchAll(PDO::FETCH_ASSOC);
-$ivanti_count = count($ivanti_rows);
+$external_rows = $pdo->query("SELECT hostname, os, ip, scan_date, status FROM inventory_external ORDER BY hostname")->fetchAll(PDO::FETCH_ASSOC);
+$external_count = count($external_rows);
 
 $sat_stmt = $pdo->query("SELECT hostname, os, ip, kernel, content_view_environment, location, last_checkin, status, role FROM inventory_satellite");
 $sat_lookup = [];
@@ -97,13 +97,13 @@ try {
     $infra_lookup = [];
 }
 
-// --- CARICAMENTO ESCLUSIONI da inventory_ivanti.status ---
-// Le esclusioni vivono su inventory_ivanti (sopravvivono ai reimport di Satellite)
+// --- CARICAMENTO ESCLUSIONI da inventory_external.status ---
+// Le esclusioni vivono su inventory_external (sopravvivono ai reimport di Satellite)
 $exclusions_lookup = [];
 try {
     $excl_stmt = $pdo->query("
         SELECT LOWER(TRIM(hostname)) as hostname
-        FROM inventory_ivanti
+        FROM inventory_external
         WHERE status IN ('excluded', 'decommissioned')
     ");
     foreach ($excl_stmt->fetchAll(PDO::FETCH_COLUMN) as $excl_hostname) {
@@ -143,26 +143,26 @@ $missing_count = 0;
 $matched_sat_keys = [];
 
 // Inizializziamo i contatori a zero
-$active_ivanti_count = 0;
+$active_external_count = 0;
 $active_satellite_count = 0;
-$ivanti_rhel7 = $ivanti_rhel8 = $ivanti_rhel9 = $ivanti_rhel10 = $ivanti_unknown = 0;
+$external_rhel7 = $external_rhel8 = $external_rhel9 = $external_rhel10 = $external_unknown = 0;
 $sat_rhel7 = $sat_rhel8 = $sat_rhel9 = $sat_rhel10 = $sat_unknown = 0;
 
-foreach ($ivanti_rows as $row) {
-    $norm_ivanti = normalize_hostname($row['hostname']);
-    $sat_record = $sat_lookup[$norm_ivanti] ?? null;
+foreach ($external_rows as $row) {
+    $norm_external = normalize_hostname($row['hostname']);
+    $sat_record = $sat_lookup[$norm_external] ?? null;
     $sat = ($sat_record && ($sat_record['status'] ?? 'active') !== 'missing') ? $sat_record : null;
     $iv_status = $row['status'] ?? 'active';
 
     // Salta infrastructure hosts (Satellite + Capsule) — gestiti separatamente
-    if (isset($infra_lookup[$norm_ivanti]) || isset($infra_lookup[strtolower(trim($row['hostname']))])) {
+    if (isset($infra_lookup[$norm_external]) || isset($infra_lookup[strtolower(trim($row['hostname']))])) {
         // Segniamo il match per evitare che appaiano nella satellite-only
-        if ($sat_record) $matched_sat_keys[$norm_ivanti] = true;
-        $merged_rows[] = ['ivanti' => $row, 'satellite' => $sat_record, 'is_infra' => true];
+        if ($sat_record) $matched_sat_keys[$norm_external] = true;
+        $merged_rows[] = ['external' => $row, 'satellite' => $sat_record, 'is_infra' => true];
         continue;
     }
 
-    // L'esclusione viene da inventory_ivanti.status
+    // L'esclusione viene da inventory_external.status
     $host_key         = strtolower(trim($row['hostname']));
     $host_key_norm    = explode('.', $host_key)[0];
     $is_excluded_host = isset($exclusions_lookup[$host_key])
@@ -170,24 +170,24 @@ foreach ($ivanti_rows as $row) {
 
     // Solo gli host non esclusi e attivi entrano nei conteggi
     if ($iv_status === 'active' && !$is_excluded_host) {
-        $active_ivanti_count++;
+        $active_external_count++;
 
         $iv_major = detect_os_major($row['os'] ?? '');
-        if ($iv_major === '7')      $ivanti_rhel7++;
-        elseif ($iv_major === '8')  $ivanti_rhel8++;
-        elseif ($iv_major === '9')  $ivanti_rhel9++;
-        elseif ($iv_major === '10') $ivanti_rhel10++;
-        else                        $ivanti_unknown++;
+        if ($iv_major === '7')      $external_rhel7++;
+        elseif ($iv_major === '8')  $external_rhel8++;
+        elseif ($iv_major === '9')  $external_rhel9++;
+        elseif ($iv_major === '10') $external_rhel10++;
+        else                        $external_unknown++;
     }
 
     if ($sat) {
         // Presente nel CSV corrente: active oppure unhealthy.
-        $matched_sat_keys[$norm_ivanti] = true;
+        $matched_sat_keys[$norm_external] = true;
     } elseif ($iv_status === 'active' && !$is_excluded_host) {
         $missing_count++;
     }
 
-    $merged_rows[] = ['ivanti' => $row, 'satellite' => $sat, 'is_infra' => false];
+    $merged_rows[] = ['external' => $row, 'satellite' => $sat, 'is_infra' => false];
 }
 
 // --- 3. CALCOLO SATELLITE ONLY E TOTALE SATELLITE ATTIVO ---
@@ -244,11 +244,11 @@ $total_satellite_count = 0;
 
 try {
     // Contiamo gli host unhealthy: presenti in Satellite con check-in scaduto/mancante
-    // Escludiamo i record fantasma (os vuoto) e gli host già esclusi da Ivanti
+    // Escludiamo i record fantasma (os vuoto) e gli host già esclusi da External
     $stmt_out = $pdo->prepare("
         SELECT COUNT(*)
         FROM inventory_satellite s
-        INNER JOIN inventory_ivanti i
+        INNER JOIN inventory_external i
             ON LOWER(SPLIT_PART(s.hostname, '.', 1)) = LOWER(SPLIT_PART(i.hostname, '.', 1))
         WHERE i.status = 'active'
           AND (s.os IS NOT NULL AND s.os != '' AND s.os != 'N/A')
@@ -303,7 +303,7 @@ try {
 
 
 // Ricalcolo Coverage sui dati attivi
-$coverage = ($active_ivanti_count > 0) ? round((($active_ivanti_count - $missing_count) / $active_ivanti_count) * 100, 1) : 0;
+$coverage = ($active_external_count > 0) ? round((($active_external_count - $missing_count) / $active_external_count) * 100, 1) : 0;
 
 // --- STATISTICHE INFRASTRUCTURE HOSTS (Satellite + Capsule) ---
 // Tutti i dati vengono da inventory_satellite (aggiornati ad ogni import CSV)
@@ -319,7 +319,7 @@ try {
             i.scan_date AS iv_scan_date,
             i.role      AS iv_role
         FROM inventory_satellite s
-        LEFT JOIN inventory_ivanti i
+        LEFT JOIN inventory_external i
             ON LOWER(SPLIT_PART(s.hostname, '.', 1)) = LOWER(SPLIT_PART(i.hostname, '.', 1))
         WHERE s.role IN ('satellite', 'capsule')
         ORDER BY CASE s.role WHEN 'satellite' THEN 0 ELSE 1 END, s.hostname
@@ -349,7 +349,7 @@ $satonly_healthy   = 0;
 $satonly_unhealthy = 0;
 
 foreach ($merged_rows as $m) {
-    $iv  = $m['ivanti'];
+    $iv  = $m['external'];
     $sat = $m['satellite'];
 
     // Skippa infra hosts (Satellite/Capsule) — hanno contatori separati
@@ -435,7 +435,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         }
     </style>
     <script>window.CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;</script>
-<?php if (!$is_admin): ?><style>.btn-exclude, [onclick^="infraEditStart"], form[action="backup_db.php"], #importForm, #ivantiImportForm { display:none !important; }.note-cell-style input, .note-cell-style textarea { pointer-events:none; opacity:.75; }</style><?php endif; ?>
+<?php if (!$is_admin): ?><style>.btn-exclude, [onclick^="infraEditStart"] { display:none !important; }.note-cell-style input, .note-cell-style textarea { pointer-events:none; opacity:.75; }</style><?php endif; ?>
 </head>
 
 <body>
@@ -448,6 +448,20 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.50' => [
+            'date' => '2026-11-25',
+            'changes' => [
+                'Documented RHEL 10.2 and 10.3 as installer targets, with RHEL 10.3 as the development and production baseline.',
+                'Documented Satellite Onboarding and the incremental migration from PHP to Python.',
+                'Moved manual CSV imports, snapshot creation, and recent backups to Settings → Inventory Data.',
+                'Added separate External and Satellite resets and a Factory Reset for both inventories and server notes.',
+                'Generalized Ivanti to External Inventory, with a PostgreSQL migration that preserves existing inventory and import history.',
+                'Made Satellite Inventory View the primary dashboard table and added independent column controls for both inventory views.',
+                'Added dashboard settings to show or hide Unified Inventory View, External Active, External OS Distribution, Missing in Satellite, and Coverage.',
+                'Split the dashboard CSV exports into dedicated Unified and Satellite downloads and consolidated administration under Settings.',
+                'Improved customer logo presentation and aligned the login logo with the dashboard.',
+            ],
+        ],
         '1.41' => [
             'date' => '2026-09-16',
             'changes' => [
@@ -461,7 +475,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         '1.40' => [
             'date' => '2026-09-16',
             'changes' => [
-                'Added a RHEL anomaly report to Diff Inventory View for Ivanti-only hosts, Satellite-only hosts, check-ins older than 30 days, and retired hosts still present in Satellite',
+                'Added a RHEL anomaly report to Diff Inventory View for External-only hosts, Satellite-only hosts, check-ins older than 30 days, and retired hosts still present in Satellite',
                 'Added unique affected-host totals, per-anomaly counters, row numbering, and anomaly-type sorting',
                 'Added email copy, CSV export, and formatted Excel export with a summary, filters, frozen headers, and colors',
                 'Made the Customer Identity name editable in Settings, with database persistence and default-value restoration',
@@ -471,14 +485,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         '1.39' => [
             'date' => '2026-09-11',
             'changes' => [
-                'Added Diff Inventory View to compare Ivanti and Satellite CSV snapshots',
+                'Added Diff Inventory View to compare External and Satellite CSV snapshots',
                 'Split the diff inventory into RHEL, Oracle Linux, SUSE, Ubuntu, CentOS, Retired, and Unknown sections with release counters',
-                'Added Ivanti and Satellite totals, column sorting, and anomaly counts to every section',
+                'Added External and Satellite totals, column sorting, and anomaly counts to every section',
                 'Highlighted Satellite check-ins older than 30 days from the snapshot date in fluorescent yellow',
-                'Automatically use the filename extraction date when the Ivanti CSV has no Scan Date column',
+                'Automatically use the filename extraction date when the External CSV has no Scan Date column',
                 'Made Unified Inventory View and Satellite Only collapsible from their title bars and collapsed by default',
-                'Made Ivanti Hostname visible by default and displayed N/A in Satellite Only',
-                'Updated CSV exports and preserved the local ivanti-import-csv directory during updates',
+                'Made External Hostname visible by default and displayed N/A in Satellite Only',
+                'Updated CSV exports and preserved the local external-import-csv directory during updates',
             ],
         ],
         '1.38' => [
@@ -532,10 +546,10 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         '1.33' => [
             'date' => '2026-09-08',
             'changes' => [
-                'Added transactional Ivanti import from the dashboard and CLI',
+                'Added transactional External import from the dashboard and CLI',
                 'Added support for Device Name, OS Name, Address, and Last Hardware Scan Date CSV fields',
-                'Ivanti updates preserve excluded and decommissioned states',
-                'Added technical Ivanti import history with inserted, updated, and skipped counts',
+                'External updates preserve excluded and decommissioned states',
+                'Added technical External import history with inserted, updated, and skipped counts',
             ],
         ],
         '1.32' => [
@@ -576,9 +590,9 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
         '1.29' => [
             'date' => '2026-09-06',
             'changes' => [
-                'Added Show/Hide toggles for Ivanti Hostname and Ivanti Scan Date',
-                'All Ivanti columns are now hidden by default in the unified view',
-                'Ivanti data remains available in comparisons and CSV exports',
+                'Added Show/Hide toggles for External Hostname and External Scan Date',
+                'All External columns are now hidden by default in the unified view',
+                'External data remains available in comparisons and CSV exports',
             ],
         ],
         '1.28' => [
@@ -651,7 +665,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
                 'Added a purple +N infrastructure-host count to the Satellite Active card',
                 'Fixed Unhealthy counts by excluding empty-OS phantom hosts and Missing hosts',
                 'Fixed duplicate excluded hosts in Satellite Only through matched_sat_keys',
-                'Read exclusions from inventory_ivanti.status instead of the nonexistent host_exclusions table',
+                'Read exclusions from inventory_external.status instead of the nonexistent host_exclusions table',
             ],
         ],
         '1.23' => [
@@ -660,7 +674,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
                 'Restored the full-width Unified Inventory View layout',
                 'Added automatic semicolon and comma delimiter support to Satellite CSV import',
                 'Added a dynamic database-driven Location filter',
-                'Added Show/Hide column toggles for Ivanti OS, Ivanti IP, Satellite IP, and Kernel',
+                'Added Show/Hide column toggles for External OS, External IP, Satellite IP, and Kernel',
                 'Added numeric version-aware kernel sorting',
                 'Added patching notes with AJAX saving and a visual indicator for populated notes',
             ],
@@ -669,15 +683,15 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
             'date'    => '2026-05-10',
             'changes' => [
                 'Added the Satellite Only table',
-                'Added dynamic Ivanti Active, Satellite Active, Missing, Coverage, and Satellite Only counters',
-                'Added OS Distribution for Ivanti and Satellite',
+                'Added dynamic External Active, Satellite Active, Missing, Coverage, and Satellite Only counters',
+                'Added OS Distribution for External and Satellite',
                 'Added hostname, missing-status, and OS-major filters',
                 'Added Unified View and Global CSV exports',
                 'Added database backups with bak_* table snapshots',
             ],
         ],
     ];
-    $current_version = array_key_first($changelog);
+    $current_version = $appVersion;
     ?>
 
     <!-- ============================================================
@@ -700,7 +714,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
 
         <!-- CENTRO: cliente configurabile -->
         <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 16px;">
-            <img src="<?= htmlspecialchars($customerLogo, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?>" style="height: 28px; width: 28px; object-fit: contain;">
+            <img src="<?= htmlspecialchars($customerLogo, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?>" style="display:block;box-sizing:border-box;height:44px;width:clamp(64px,9vw,128px);padding:5px;border-radius:6px;background:#f8fafc;object-fit:contain;">
             <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;">
                 <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Customer</div>
                 <div style="font-size: 12px; color: #abb2b9; font-weight: 600;"><?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?></div>
@@ -756,7 +770,7 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
             <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                     <span style="background: <?= $ver === $current_version ? 'rgba(155,89,182,0.2)' : 'rgba(255,255,255,0.05)' ?>; border: 1px solid <?= $ver === $current_version ? 'rgba(155,89,182,0.5)' : 'rgba(255,255,255,0.1)' ?>; color: <?= $ver === $current_version ? '#9b59b6' : '#7f8c8d' ?>; border-radius: 4px; padding: 3px 10px; font-size: 13px; font-weight: bold;">
-                        v<?= $ver ?>
+                        <?= $ver === 'Unreleased' ? 'Unreleased' : 'v' . htmlspecialchars((string) $ver) ?>
                     </span>
                     <span style="font-size: 12px; color: #566573;"><?= $entry['date'] ?></span>
                     <?php if ($ver === $current_version): ?>
@@ -784,21 +798,6 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
 <?php
 // ... logica esistente ...
 
-// 1. Fetch the latest database backups from PostgreSQL catalog
-$latest_backups = [];
-try {
-    $stmt_bak = $pdo->query("
-        SELECT tablename
-        FROM pg_tables
-        WHERE schemaname = 'public' AND tablename LIKE 'bak_notes_%'
-        ORDER BY tablename DESC
-        LIMIT 3
-    ");
-    $latest_backups = $stmt_bak->fetchAll(PDO::FETCH_COLUMN);
-} catch (Exception $e) {
-    // Fail silently or log error
-}
-
 // 2. Fetch the last modified time of the import script as an indicator
 $last_import_date = "Never";
 if (file_exists('import_satellite.php')) {
@@ -810,32 +809,8 @@ if (file_exists('import_satellite.php')) {
 
 
 
-<?php if (isset($_GET['backup']) && $_GET['backup'] === 'success'): ?>
-    <div style="background-color: #d4edda; color: #155724; padding: 12px 20px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #c3e6cb; display: flex; align-items: center; gap: 10px; font-family: sans-serif;">
-        <span style="font-size: 1.2em;">✅</span>
-        <div>
-            <strong>Backup Successful!</strong><br>
-            <small style="color: #155724; opacity: 0.85;">Snapshot tables have been successfully frozen inside the database at local time.</small>
-        </div>
-    </div>
-<?php endif; ?>
-
-<?php if (isset($_GET['ivanti_success'])): ?>
-    <div style="background-color: #d4edda; color: #155724; padding: 12px 20px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #c3e6cb; font-family: sans-serif;">
-        <strong>Ivanti import completed.</strong>
-        <?= (int) $_GET['ivanti_success'] ?> imported,
-        <?= (int) ($_GET['ivanti_inserted'] ?? 0) ?> inserted,
-        <?= (int) ($_GET['ivanti_updated'] ?? 0) ?> updated,
-        <?= (int) ($_GET['ivanti_skipped'] ?? 0) ?> skipped.
-    </div>
-<?php endif; ?>
-
-
-
-
-
     <!-- RIGA 1: 5 stat card inventory -->
-    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(<?= 2 + (int) $externalDashboardVisibility['active'] + (int) $externalDashboardVisibility['missing'] + (int) $externalDashboardVisibility['coverage'] ?>, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px;">
 
         <?php
         // Coverage: verde se >= 90%, giallo se >= 70%, rosso sotto
@@ -843,12 +818,14 @@ if (file_exists('import_satellite.php')) {
         $cov_color = $cov_val >= 90 ? '#2ecc71' : ($cov_val >= 70 ? '#f39c12' : '#e74c3c');
         ?>
 
-        <!-- Ivanti Active -->
+        <?php if ($externalDashboardVisibility['active']): ?>
+        <!-- External Active -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(52,152,219,0.5); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
-            <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Ivanti Active</div>
-            <div style="font-size: 32px; font-weight: 700; color: #3498db; line-height: 1;"><?= $active_ivanti_count ?></div>
-            <div style="font-size: 11px; color: #566573;">Active Ivanti servers</div>
+            <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">External Active</div>
+            <div style="font-size: 32px; font-weight: 700; color: #3498db; line-height: 1;"><?= $active_external_count ?></div>
+            <div style="font-size: 11px; color: #566573;">Active External servers</div>
         </div>
+        <?php endif; ?>
 
         <!-- Satellite Active -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(52,152,219,0.5); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
@@ -869,19 +846,23 @@ if (file_exists('import_satellite.php')) {
             <?php endif; ?>
         </div>
 
+        <?php if ($externalDashboardVisibility['missing']): ?>
         <!-- Missing in Satellite -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(231,76,60,0.6); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Missing in Sat</div>
             <div style="font-size: 32px; font-weight: 700; color: #e74c3c; line-height: 1;"><?= $missing_count ?></div>
-            <div style="font-size: 11px; color: #566573;">Ivanti servers missing in Satellite</div>
+            <div style="font-size: 11px; color: #566573;">External servers missing in Satellite</div>
         </div>
+        <?php endif; ?>
 
+        <?php if ($externalDashboardVisibility['coverage']): ?>
         <!-- Coverage -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid <?= $cov_color ?>88; border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Coverage</div>
             <div style="font-size: 32px; font-weight: 700; color: <?= $cov_color ?>; line-height: 1;"><?= $coverage ?>%</div>
-            <div style="font-size: 11px; color: #566573;">Ivanti servers covered by Satellite</div>
+            <div style="font-size: 11px; color: #566573;">External servers covered by Satellite</div>
         </div>
+        <?php endif; ?>
 
         <!-- Satellite Only -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(243,156,18,0.5); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
@@ -892,24 +873,26 @@ if (file_exists('import_satellite.php')) {
 
     </div>
 
-    <!-- RIGA 2: OS Distribution Ivanti + Satellite -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+    <!-- RIGA 2: OS Distribution External + Satellite -->
+    <div style="display: grid; grid-template-columns: <?= $externalDashboardVisibility['os'] ? '1fr 1fr' : '1fr' ?>; gap: 12px; margin-bottom: 20px;">
 
-        <!-- Ivanti OS Distribution -->
+        <?php if ($externalDashboardVisibility['os']): ?>
+        <!-- External OS Distribution -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 14px 18px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-            <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; white-space: nowrap;">🖥️ Ivanti OS distribution</div>
+            <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; white-space: nowrap;">🖥️ External OS distribution</div>
             <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-                <span style="font-size: 13px; color: #566573;">RHEL 7: <strong style="color: <?= $ivanti_rhel7 > 0 ? '#e74c3c' : '#7f8c8d' ?>;"><?= $ivanti_rhel7 ?></strong></span>
+                <span style="font-size: 13px; color: #566573;">RHEL 7: <strong style="color: <?= $external_rhel7 > 0 ? '#e74c3c' : '#7f8c8d' ?>;"><?= $external_rhel7 ?></strong></span>
                 <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">RHEL 8: <strong style="color: <?= $ivanti_rhel8 > 0 ? '#f39c12' : '#7f8c8d' ?>;"><?= $ivanti_rhel8 ?></strong></span>
+                <span style="font-size: 13px; color: #566573;">RHEL 8: <strong style="color: <?= $external_rhel8 > 0 ? '#f39c12' : '#7f8c8d' ?>;"><?= $external_rhel8 ?></strong></span>
                 <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">RHEL 9: <strong style="color: <?= $ivanti_rhel9 > 0 ? '#2ecc71' : '#7f8c8d' ?>;"><?= $ivanti_rhel9 ?></strong></span>
+                <span style="font-size: 13px; color: #566573;">RHEL 9: <strong style="color: <?= $external_rhel9 > 0 ? '#2ecc71' : '#7f8c8d' ?>;"><?= $external_rhel9 ?></strong></span>
                 <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">RHEL 10: <strong style="color: <?= $ivanti_rhel10 > 0 ? '#3498db' : '#7f8c8d' ?>;"><?= $ivanti_rhel10 ?></strong></span>
+                <span style="font-size: 13px; color: #566573;">RHEL 10: <strong style="color: <?= $external_rhel10 > 0 ? '#3498db' : '#7f8c8d' ?>;"><?= $external_rhel10 ?></strong></span>
                 <span style="color: rgba(255,255,255,0.1);">|</span>
-                <span style="font-size: 13px; color: #566573;">Unknown: <strong style="color: <?= $ivanti_unknown > 0 ? '#95a5a6' : '#7f8c8d' ?>;"><?= $ivanti_unknown ?></strong></span>
+                <span style="font-size: 13px; color: #566573;">Unknown: <strong style="color: <?= $external_unknown > 0 ? '#95a5a6' : '#7f8c8d' ?>;"><?= $external_unknown ?></strong></span>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Satellite OS Distribution -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 14px 18px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
@@ -1009,7 +992,7 @@ if (file_exists('import_satellite.php')) {
                         </span>
                     </div>
 
-                    <div style="color: #7f8c8d; white-space: nowrap;">Ivanti scan</div>
+                    <div style="color: #7f8c8d; white-space: nowrap;">External scan</div>
                     <div style="color: #abb2b9;"><?= htmlspecialchars($inf['iv_scan_date']) ?></div>
                 </div>
 
@@ -1078,8 +1061,8 @@ if (file_exists('import_satellite.php')) {
         <p style="font-size: 11px; color: #85929e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">📊 Data ingestion status</p>
 
         <div style="background: rgba(0,0,0,0.15); padding: 9px 11px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
-            <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">Ivanti — last scan date</div>
-            <div style="font-size: 14px; font-weight: 600; color: #2ecc71;"><?= htmlspecialchars($last_ivanti_import) ?></div>
+            <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">External — last scan date</div>
+            <div style="font-size: 14px; font-weight: 600; color: #2ecc71;"><?= htmlspecialchars($last_external_import) ?></div>
         </div>
         <div style="background: rgba(0,0,0,0.15); padding: 9px 11px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
             <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; margin-bottom: 2px;">Red Hat Satellite — last check-in</div>
@@ -1186,60 +1169,16 @@ if (file_exists('import_satellite.php')) {
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
             <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.4px; font-weight: bold;">Export CSV</div>
-            <button type="button" onclick="exportCSV()" style="display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(39,174,96,0.1); color: #2ecc71; font-size: 12px; cursor: pointer; text-align: left; font-weight: bold;">
-                📊 Unified view only
+            <?php if ($externalDashboardVisibility['unified']): ?>
+            <button type="button" onclick="exportUnifiedInventoryCSV()" style="display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(39,174,96,0.1); color: #2ecc71; font-size: 12px; cursor: pointer; text-align: left; font-weight: bold;">
+                📊 Unified Inventory View
             </button>
-            <button type="button" onclick="exportFullCSV()" style="display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(52,152,219,0.1); color: #3498db; font-size: 12px; cursor: pointer; text-align: left; font-weight: bold;">
-                📊 All views (global)
-            </button>
-        </div>
-
-        <div style="border-top: 1px solid rgba(255,255,255,0.07); padding-top: 8px; display: flex; flex-direction: column; gap: 6px;">
-            <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.4px; font-weight: bold;">Corrective actions</div>
-            <form action="backup_db.php" method="POST" style="margin: 0;">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-                <button type="submit" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(127,140,141,0.15); color: #abb2b9; font-size: 12px; cursor: pointer; font-weight: bold; text-align: left;">
-                    📂 Backup DB
-                </button>
-            </form>
-            <form action="import_satellite.php" method="POST" enctype="multipart/form-data" id="importForm" style="margin: 0;">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-                <input type="file" name="satellite_csv" id="fileInput" style="display: none;" onchange="document.getElementById('importForm').submit()">
-                <button type="button" onclick="document.getElementById('fileInput').click()" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(230,126,34,0.12); color: #e67e22; font-size: 12px; cursor: pointer; font-weight: bold; text-align: left;">
-                    📥 Import Satellite CSV
-                </button>
-            </form>
-            <form action="import_ivanti.php" method="POST" enctype="multipart/form-data" id="ivantiImportForm" style="margin: 0;">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-                <input type="file" name="ivanti_csv" accept=".csv,text/csv" id="ivantiFileInput" style="display: none;" onchange="document.getElementById('ivantiImportForm').submit()">
-                <button type="button" onclick="document.getElementById('ivantiFileInput').click()" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(52,152,219,0.12); color: #3498db; font-size: 12px; cursor: pointer; font-weight: bold; text-align: left;">
-                    📥 Import Ivanti CSV
-                </button>
-            </form>
-        </div>
-
-        <div style="border-top: 1px solid rgba(255,255,255,0.07); padding-top: 8px; margin-top: auto;">
-            <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.4px; font-weight: bold; margin-bottom: 6px;">Recent DB snapshots</div>
-            <?php if (!empty($latest_backups)): ?>
-                <?php foreach ($latest_backups as $bak):
-                    $parts = explode('_', $bak);
-                    $date_part = $parts[2] ?? '';
-                    $time_part = $parts[3] ?? '';
-                    if (strlen($date_part) == 8 && strlen($time_part) == 4) {
-                        $formatted_bak = substr($date_part,0,4)."-".substr($date_part,4,2)."-".substr($date_part,6,2)." ".substr($time_part,0,2).":".substr($time_part,2,2);
-                    } else {
-                        $formatted_bak = str_replace('bak_notes_', '', $bak);
-                    }
-                ?>
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #d5dbdb; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <span><?= htmlspecialchars($formatted_bak) ?></span>
-                    <span style="background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.25); border-radius: 3px; padding: 1px 6px; font-size: 10px; font-weight: bold;">OK</span>
-                </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div style="font-size: 11px; color: #7f8c8d;">No snapshots found</div>
             <?php endif; ?>
+            <button type="button" onclick="exportSatelliteInventoryCSV()" style="display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(52,152,219,0.1); color: #3498db; font-size: 12px; cursor: pointer; text-align: left; font-weight: bold;">
+                📊 Satellite Inventory View
+            </button>
         </div>
+
     </div>
 
 </div>
@@ -1249,27 +1188,6 @@ if (file_exists('import_satellite.php')) {
 
 <div class="card" style="margin-bottom: 15px; padding: 15px;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                <span class="column-toggle-label">👁️ Show/Hide Columns:</span>
-                <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-ivanti-hostname" onchange="toggleColumn('col-iv-hostname', this.checked)" checked> Ivanti Hostname
-                </label>
-                <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-ivanti-scan" onchange="toggleColumn('col-iv-scan', this.checked)"> Ivanti Scan Date
-                </label>
-                <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-ivanti-os" onchange="toggleColumn('col-iv-os', this.checked)"> Ivanti OS
-                </label>
-                <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-ivanti-ip" onchange="toggleColumn('col-iv-ip', this.checked)"> Ivanti IP
-                </label>
-                <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-sat-ip" onchange="toggleColumn('col-sat-ip', this.checked)"> Sat IP
-                </label>
-                <label class="toggle-checkbox-label">
-                    <input type="checkbox" id="toggle-kernel" onchange="toggleColumn('col-kernel', this.checked)"> Kernel
-                </label>
-            </div>
 
             <!-- Bottone show/hide esclusi -->
             <button id="btn-toggle-excluded"
@@ -1287,19 +1205,167 @@ if (file_exists('import_satellite.php')) {
 
 
 
-    <div class="card">
+<div class="card">
+    <button type="button" id="toggle-satellite-only" aria-expanded="true" aria-controls="satellite-only-content" aria-label="Toggle Satellite Inventory" onclick="toggleInventorySection(this, 'satellite-only-content', 'satellite-only-arrow')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 2px 10px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#e5e8e8;cursor:pointer;text-align:left;">
+        <span style="font-size:1.5em;font-weight:700;">Satellite Inventory View</span><span id="satellite-only-arrow" aria-hidden="true" style="font-size:20px;color:#5dade2;transition:transform .15s;transform:rotate(90deg)">▸</span>
+    </button>
+    <div id="satellite-only-content" style="margin-top:16px;">
+            <fieldset style="display:flex;gap:12px;flex-wrap:wrap;margin:0 0 12px;">
+                <legend>Show/Hide Columns</legend>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="2" checked> Satellite Hostname</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="3" checked> OS</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="4" checked> IP</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="5" checked> Kernel</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="6" checked> Content View</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="7" checked> Location</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="satelliteOnlyTable" data-inventory-column="8" checked> Last Check-in</label>
+            </fieldset>
+    <div class="table-wrapper">
+        <table class="table" id="satelliteOnlyTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th class="col-hidden">External Hostname</th>
+                    <th>Satellite Hostname</th>
+                    <th>OS</th>
+                    <th>IP</th>
+                    <th>Kernel</th>
+                    <th>Content View</th>
+                    <th>Location</th>
+                    <th>Last Checkin</th>
+                    <th style="width: 250px; background-color: #fcf8e3; color: #8a6d3b;">Patching Notes & Plan</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+
+            <?php
+            $s_counter = 1;
+            foreach ($sat_lookup as $norm_name => $sat_data) {
+                if (!isset($infra_lookup[$norm_name])) {
+
+                    // --- Calcolo stale checkin per questa riga ---
+                    $s_stale_checkin = false;
+                    $s_checkin_display = 'N/A';
+                    $s_checkin_raw = $sat_data['last_checkin'] ?? '';
+                    if (!empty($s_checkin_raw) && $s_checkin_raw !== 'N/A' && $s_checkin_raw !== 'N/D') {
+                        $s_checkin_display = $s_checkin_raw;
+                        $s_checkin_obj = DateTime::createFromFormat('Y-m-d', substr($s_checkin_raw, 0, 10));
+                        if ($s_checkin_obj && $s_checkin_obj < $satellite_checkin_limit_obj) {
+                            $s_stale_checkin = true;
+                        }
+                    } else {
+                        // N/A o vuoto = anomalia
+                        $s_stale_checkin = true;
+                        $s_checkin_display = 'N/A';
+                    }
+
+                    // --- Filtri ---
+                    if (!empty($filter_search) && strpos(strtolower($sat_data['hostname']), strtolower($filter_search)) === false) continue;
+                    if ($filter_os != 'all' && detect_os_major($sat_data['os'] ?? '') != $filter_os) continue;
+                    if ($filter_missing == 'unhealthy' && !$s_stale_checkin) continue;
+                    if ($filter_missing == 'healthy'   &&  $s_stale_checkin) continue;
+
+                    $s_hkey        = strtolower(trim($sat_data['hostname'] ?? ''));
+                    $s_is_excluded = isset($exclusions_lookup[$s_hkey]);
+                    $s_class       = $s_is_excluded ? 'excluded-row' : '';
+
+                    $current_sat_hostname = $sat_data['hostname'];
+                    $note_info    = $notes_lookup[normalize_hostname($current_sat_hostname)] ?? null;
+                    $db_note      = trim($note_info['notes'] ?? '');
+                    $db_date      = trim($note_info['migration_date'] ?? '');
+                    $is_populated_sat = (!empty($db_note) || !empty($db_date));
+                    $classes_sat  = 'note-cell-style' . ($is_populated_sat ? ' note-populated' : '');
+                    $safe_sat_html_id = 'satellite-' . str_replace('.', '-', $current_sat_hostname);
+            ?>
+
+                    <tr class="<?= $s_class ?>">
+                        <td><?= $s_counter++ ?></td>
+                        <td class="col-hidden">N/A</td>
+                        <td><?= htmlspecialchars($sat_data['hostname'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($sat_data['os'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($sat_data['ip'] ?? '') ?></td>
+                        <td style="font-size: 0.85em;"><?= htmlspecialchars($sat_data['kernel'] ?? 'N/A') ?></td>
+                        <td><?= htmlspecialchars($sat_data['content_view_environment'] ?? '') ?></td>
+
+                        <td>
+                            <span style="padding: 2px 6px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.85em; color: #e5e8e8; font-weight: bold;">
+                                📍 <?= htmlspecialchars($sat_data['location'] ?? 'N/A') ?>
+                            </span>
+                        </td>
+
+                        <!-- Last checkin con evidenziazione anomalia -->
+                        <td style="<?= $s_stale_checkin ? 'background: rgba(231,76,60,0.08); color: #e74c3c; font-weight: bold;' : '' ?>">
+                            <?php if ($s_stale_checkin): ?>
+                                <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="color: #e74c3c; font-size: 14px;">✕</span>
+                                    <span><?= htmlspecialchars($s_checkin_display) ?></span>
+                                </span>
+                            <?php else: ?>
+                                <?= htmlspecialchars($s_checkin_display) ?>
+                            <?php endif; ?>
+                        </td>
+
+                        <td id="note-td-<?= htmlspecialchars($safe_sat_html_id) ?>" class="<?= $classes_sat ?>">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <input type="date"
+                                    onchange="saveNote('<?= addslashes($current_sat_hostname) ?>', this.value, 'date', '<?= addslashes($safe_sat_html_id) ?>')"
+                                    value="<?= htmlspecialchars($db_date) ?>"
+                                    style="font-size: 0.75em; padding: 2px; border: 1px solid #ccc; border-radius: 3px; width: 100%;">
+                                <textarea
+                                    onblur="saveNote('<?= addslashes($current_sat_hostname) ?>', this.value, 'text', '<?= addslashes($safe_sat_html_id) ?>')"
+                                    placeholder="Patching Notes...."
+                                    style="width: 100%; height: 35px; font-size: 0.8em; border: 1px solid #ccc; border-radius: 3px; resize: vertical;"><?= htmlspecialchars($db_note) ?></textarea>
+                                <small id="status-<?= htmlspecialchars($safe_sat_html_id) ?>" style="font-size: 0.65em; color: #27ae60; display: none; font-weight: bold;">✅ Saved</small>
+                            </div>
+                        </td>
+
+                        <td style="text-align: center;">
+                            <button class="btn-exclude"
+                                    onclick="toggleExclude('<?= htmlspecialchars($sat_data['hostname'] ?? '') ?>', this)"
+                                    title="<?= $s_is_excluded ? 'Re-include this host in all counts' : 'Exclude this host from all counts' ?>"
+                                    style="padding: 5px 10px; border-radius: 4px; border: 1px solid <?= $s_is_excluded ? 'rgba(46,204,113,0.4)' : 'rgba(231,76,60,0.4)' ?>; background: <?= $s_is_excluded ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.08)' ?>; color: <?= $s_is_excluded ? '#2ecc71' : '#e74c3c' ?>; font-size: 12px; cursor: pointer; font-weight: bold;">
+                                <?= $s_is_excluded ? '↩ Re-include' : '⊘ Exclude' ?>
+                            </button>
+                        </td>
+
+                        </tr>
+                    <?php }
+                } ?>
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+
+<?php if ($externalDashboardVisibility['unified']): ?>
+<div class="card">
         <button type="button" id="toggle-unified-inventory" aria-expanded="false" aria-controls="unified-inventory-content" aria-label="Toggle Unified Inventory View" onclick="toggleInventorySection(this, 'unified-inventory-content', 'unified-inventory-arrow', 'unified-inventory-pagination')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 2px 10px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#e5e8e8;cursor:pointer;text-align:left;">
             <span style="font-size:1.5em;font-weight:700;">Unified Inventory View</span><span id="unified-inventory-arrow" aria-hidden="true" style="font-size:20px;color:#5dade2;transition:transform .15s;">▸</span>
         </button>
         <div id="unified-inventory-content" hidden style="margin-top:16px;">
+            <fieldset style="display:flex;gap:12px;flex-wrap:wrap;margin:0 0 12px;">
+                <legend>Show/Hide Columns</legend>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="1" checked> External Hostname</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="2"> External OS</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="3"> External IP</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="4"> External Scan Date</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="5" checked> Satellite Hostname</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="6" checked> Satellite OS</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="7"> Satellite IP</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="8"> Kernel</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="9" checked> Content View</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="10" checked> Location</label>
+                <label class="toggle-checkbox-label"><input type="checkbox" data-inventory-table="mainInventoryTable" data-inventory-column="11" checked> Last Check-in</label>
+            </fieldset>
         <div class="table-wrapper">
             <table class="table" id="mainInventoryTable">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th class="col-iv-hostname">Ivanti Hostname</th>
-                        <th class="col-iv-os col-hidden">Ivanti OS</th>
-                        <th class="col-iv-ip col-hidden">Ivanti IP</th>
+                        <th class="col-iv-hostname">External Hostname</th>
+                        <th class="col-iv-os col-hidden">External OS</th>
+                        <th class="col-iv-ip col-hidden">External IP</th>
                         <th class="col-iv-scan col-hidden">Scan Date</th>
                         <th>Sat Hostname</th>
                         <th>Sat OS</th>
@@ -1322,7 +1388,7 @@ if (file_exists('import_satellite.php')) {
             $perPage = 100;
             $filtered_main_count = 0;
             foreach ($merged_rows as $merged) {
-                $row = $merged['ivanti'];
+                $row = $merged['external'];
                 $sat = $merged['satellite'];
 
                 // Gli infrastructure host (Satellite/Capsule) non appaiono nella tabella normale
@@ -1391,7 +1457,7 @@ if (file_exists('import_satellite.php')) {
                     $date_obj = DateTime::createFromFormat('d/m/Y H:i', $scan_date_raw);
                     if (!$date_obj) $date_obj = DateTime::createFromFormat('d/m/Y', substr($scan_date_raw, 0, 10));
 
-                    // Segnalazione se l'ultimo scan Ivanti è più vecchio di 30 giorni
+                    // Segnalazione se l'ultimo scan External è più vecchio di 30 giorni
                     if ($date_obj && $date_obj < (new DateTime())->modify('-30 days')) {
                         $date_class = 'warn-text';
                     }
@@ -1418,7 +1484,7 @@ if (file_exists('import_satellite.php')) {
 
                 $status = $row['status'] ?? 'active';
 
-                // Recuperiamo lo stato definitivo: Satellite ha priorità su Ivanti
+                // Recuperiamo lo stato definitivo: Satellite ha priorità su External
                 $status = $sat['status'] ?? $row['status'] ?? 'active';
 
                 // Esclusione da host_exclusions (indipendente dall'import)
@@ -1527,129 +1593,7 @@ if (file_exists('import_satellite.php')) {
 <?php if ($page < $main_pages): ?><a href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ["page" => $page + 1]))) ?>">Next</a><?php endif; ?>
 </div>
 <?php endif; ?>
-
-    <div class="card">
-    <button type="button" id="toggle-satellite-only" aria-expanded="false" aria-controls="satellite-only-content" aria-label="Toggle Satellite Only inventory" onclick="toggleInventorySection(this, 'satellite-only-content', 'satellite-only-arrow')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 2px 10px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#e5e8e8;cursor:pointer;text-align:left;">
-        <span style="font-size:1.5em;font-weight:700;">Satellite Only (Not in Ivanti)</span><span id="satellite-only-arrow" aria-hidden="true" style="font-size:20px;color:#5dade2;transition:transform .15s;">▸</span>
-    </button>
-    <div id="satellite-only-content" hidden style="margin-top:16px;">
-    <div class="table-wrapper">
-        <table class="table" id="satelliteOnlyTable">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th class="col-iv-hostname">Ivanti Hostname</th>
-                    <th>Satellite Hostname</th>
-                    <th>OS</th>
-                    <th>IP</th>
-                    <th>Kernel</th>
-                    <th>Content View</th>
-                    <th>Location</th>
-                    <th>Last Checkin</th>
-                    <th style="width: 250px; background-color: #fcf8e3; color: #8a6d3b;">Patching Notes & Plan</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-
-            <?php
-            $s_counter = 1;
-            foreach ($sat_lookup as $norm_name => $sat_data) {
-                if (!isset($matched_sat_keys[$norm_name])) {
-
-                    // --- Calcolo stale checkin per questa riga ---
-                    $s_stale_checkin = false;
-                    $s_checkin_display = 'N/A';
-                    $s_checkin_raw = $sat_data['last_checkin'] ?? '';
-                    if (!empty($s_checkin_raw) && $s_checkin_raw !== 'N/A' && $s_checkin_raw !== 'N/D') {
-                        $s_checkin_display = $s_checkin_raw;
-                        $s_checkin_obj = DateTime::createFromFormat('Y-m-d', substr($s_checkin_raw, 0, 10));
-                        if ($s_checkin_obj && $s_checkin_obj < $satellite_checkin_limit_obj) {
-                            $s_stale_checkin = true;
-                        }
-                    } else {
-                        // N/A o vuoto = anomalia
-                        $s_stale_checkin = true;
-                        $s_checkin_display = 'N/A';
-                    }
-
-                    // --- Filtri ---
-                    if (!empty($filter_search) && strpos(strtolower($sat_data['hostname']), strtolower($filter_search)) === false) continue;
-                    if ($filter_os != 'all' && detect_os_major($sat_data['os'] ?? '') != $filter_os) continue;
-                    if ($filter_missing == 'unhealthy' && !$s_stale_checkin) continue;
-                    if ($filter_missing == 'healthy'   &&  $s_stale_checkin) continue;
-
-                    $s_hkey        = strtolower(trim($sat_data['hostname'] ?? ''));
-                    $s_is_excluded = isset($exclusions_lookup[$s_hkey]);
-                    $s_class       = $s_is_excluded ? 'excluded-row' : '';
-
-                    $current_sat_hostname = $sat_data['hostname'];
-                    $note_info    = $notes_lookup[normalize_hostname($current_sat_hostname)] ?? null;
-                    $db_note      = trim($note_info['notes'] ?? '');
-                    $db_date      = trim($note_info['migration_date'] ?? '');
-                    $is_populated_sat = (!empty($db_note) || !empty($db_date));
-                    $classes_sat  = 'note-cell-style' . ($is_populated_sat ? ' note-populated' : '');
-                    $safe_sat_html_id = str_replace('.', '-', $current_sat_hostname);
-            ?>
-
-                    <tr class="<?= $s_class ?>">
-                        <td><?= $s_counter++ ?></td>
-                        <td class="col-iv-hostname">N/A</td>
-                        <td><?= htmlspecialchars($sat_data['hostname'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($sat_data['os'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($sat_data['ip'] ?? '') ?></td>
-                        <td style="font-size: 0.85em;"><?= htmlspecialchars($sat_data['kernel'] ?? 'N/A') ?></td>
-                        <td><?= htmlspecialchars($sat_data['content_view_environment'] ?? '') ?></td>
-
-                        <td>
-                            <span style="padding: 2px 6px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.85em; color: #e5e8e8; font-weight: bold;">
-                                📍 <?= htmlspecialchars($sat_data['location'] ?? 'N/A') ?>
-                            </span>
-                        </td>
-
-                        <!-- Last checkin con evidenziazione anomalia -->
-                        <td style="<?= $s_stale_checkin ? 'background: rgba(231,76,60,0.08); color: #e74c3c; font-weight: bold;' : '' ?>">
-                            <?php if ($s_stale_checkin): ?>
-                                <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                    <span style="color: #e74c3c; font-size: 14px;">✕</span>
-                                    <span><?= htmlspecialchars($s_checkin_display) ?></span>
-                                </span>
-                            <?php else: ?>
-                                <?= htmlspecialchars($s_checkin_display) ?>
-                            <?php endif; ?>
-                        </td>
-
-                        <td id="note-td-<?= htmlspecialchars($safe_sat_html_id) ?>" class="<?= $classes_sat ?>">
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <input type="date"
-                                    onchange="saveNote('<?= addslashes($current_sat_hostname) ?>', this.value, 'date', '<?= addslashes($safe_sat_html_id) ?>')"
-                                    value="<?= htmlspecialchars($db_date) ?>"
-                                    style="font-size: 0.75em; padding: 2px; border: 1px solid #ccc; border-radius: 3px; width: 100%;">
-                                <textarea
-                                    onblur="saveNote('<?= addslashes($current_sat_hostname) ?>', this.value, 'text', '<?= addslashes($safe_sat_html_id) ?>')"
-                                    placeholder="Patching Notes...."
-                                    style="width: 100%; height: 35px; font-size: 0.8em; border: 1px solid #ccc; border-radius: 3px; resize: vertical;"><?= htmlspecialchars($db_note) ?></textarea>
-                                <small id="status-<?= htmlspecialchars($safe_sat_html_id) ?>" style="font-size: 0.65em; color: #27ae60; display: none; font-weight: bold;">✅ Saved</small>
-                            </div>
-                        </td>
-
-                        <td style="text-align: center;">
-                            <button class="btn-exclude"
-                                    onclick="toggleExclude('<?= htmlspecialchars($sat_data['hostname'] ?? '') ?>', this)"
-                                    title="<?= $s_is_excluded ? 'Re-include this host in all counts' : 'Exclude this host from all counts' ?>"
-                                    style="padding: 5px 10px; border-radius: 4px; border: 1px solid <?= $s_is_excluded ? 'rgba(46,204,113,0.4)' : 'rgba(231,76,60,0.4)' ?>; background: <?= $s_is_excluded ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.08)' ?>; color: <?= $s_is_excluded ? '#2ecc71' : '#e74c3c' ?>; font-size: 12px; cursor: pointer; font-weight: bold;">
-                                <?= $s_is_excluded ? '↩ Re-include' : '⊘ Exclude' ?>
-                            </button>
-                        </td>
-
-                        </tr>
-                    <?php }
-                } ?>
-                </tbody>
-            </table>
-        </div>
-        </div>
-    </div>
+<?php endif; ?>
 </div>
 
 <script>
@@ -1715,19 +1659,13 @@ function sortTabellaKernel() {
 }
 
 
-function toggleColumn(columnClass, isChecked) {
-    // Seleziona tutte le celle (th e td) che hanno la classe specificata
-    const cells = document.querySelectorAll('.' + columnClass);
-
-    cells.forEach(cell => {
-        if (isChecked) {
-            // Se il checkbox è selezionato, mostra la colonna
-            cell.classList.remove('col-hidden');
-        } else {
-            // Se deselezionato, nascondi la colonna aggiungendo la classe
-            cell.classList.add('col-hidden');
-        }
-    });
+function applyInventoryColumnVisibility(checkbox) {
+    const table = document.getElementById(checkbox.dataset.inventoryTable);
+    if (!table) return;
+    const column = Number(checkbox.dataset.inventoryColumn);
+    for (const row of table.rows) {
+        row.cells[column]?.classList.toggle('col-hidden', !checkbox.checked);
+    }
 }
 
 // --- GESTIONE HOST ESCLUSI ---
@@ -1790,13 +1728,10 @@ document.addEventListener("DOMContentLoaded", function() {
         row.style.display = 'none';
     });
 
-    // Stato iniziale checkbox colonne
-    toggleColumn('col-iv-hostname', document.getElementById('toggle-ivanti-hostname').checked);
-    toggleColumn('col-iv-scan', document.getElementById('toggle-ivanti-scan').checked);
-    toggleColumn('col-iv-os',  document.getElementById('toggle-ivanti-os').checked);
-    toggleColumn('col-iv-ip',  document.getElementById('toggle-ivanti-ip').checked);
-    toggleColumn('col-sat-ip', document.getElementById('toggle-sat-ip').checked);
-    toggleColumn('col-kernel', document.getElementById('toggle-kernel').checked);
+    document.querySelectorAll('[data-inventory-column]').forEach(checkbox => {
+        applyInventoryColumnVisibility(checkbox);
+        checkbox.addEventListener('change', () => applyInventoryColumnVisibility(checkbox));
+    });
 });
 
 
@@ -1847,13 +1782,13 @@ function saveNote(hostname, value, type, safeId) {
 </script>
 
 <script>
-function exportCSV() {
+function exportUnifiedInventoryCSV() {
     // 1. Prendi i dati dalla tabella principale (Unified Inventory)
     const table = document.getElementById("mainInventoryTable");
     let csv = [];
 
     // Intestazioni personalizzate per il CSV
-    csv.push("Ivanti Hostname,Ivanti OS,Ivanti IP,Scan Date,Sat Hostname,Sat OS,Sat IP,Kernel,CV Env,Location,Last Checkin,Migration Date,Notes");
+    csv.push("External Hostname,External OS,External IP,Scan Date,Sat Hostname,Sat OS,Sat IP,Kernel,CV Env,Location,Last Checkin,Migration Date,Notes");
 
     const rows = table.querySelectorAll("tbody tr");
 
@@ -1863,9 +1798,9 @@ function exportCSV() {
         if (cols.length < 10) return;
 
         let rowData = [
-            cols[1].innerText, // Ivanti Hostname
-            cols[2].innerText, // Ivanti OS
-            cols[3].innerText, // Ivanti IP
+            cols[1].innerText, // External Hostname
+            cols[2].innerText, // External OS
+            cols[3].innerText, // External IP
             cols[4].innerText.replace('⚠️', ''), // Scan Date
             cols[5].innerText === 'MISSING' ? '' : cols[5].innerText, // Sat Hostname
             cols[6].innerText === 'MISSING' ? '' : cols[6].innerText, // Sat OS
@@ -1891,7 +1826,7 @@ function exportCSV() {
     link.setAttribute("href", encodedUri);
 
     const date = new Date().toISOString().slice(0, 10);
-    link.setAttribute("download", `inventory_patching_${date}.csv`);
+    link.setAttribute("download", `unified_inventory_${date}.csv`);
     document.body.appendChild(link);
 
     link.click();
@@ -1900,82 +1835,33 @@ function exportCSV() {
 </script>
 
 <script>
-function exportFullCSV() {
-    let csv = [];
-    // Intestazione del CSV
-    csv.push("Source,Hostname,OS,IP,Scan/Checkin,Kernel,CV Env,Migration Date,Notes");
+function exportSatelliteInventoryCSV() {
+    const table = document.getElementById('satelliteOnlyTable');
+    if (!table) return;
 
-    // --- FUNZIONE INTERNA PER PROCESSARE UNA TABELLA ---
-    const processTable = (tableId, sourceLabel) => {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-        const rows = table.querySelectorAll("tbody tr");
+    const rows = [['Satellite Hostname', 'OS', 'IP', 'Kernel', 'Content View', 'Location', 'Last Check-in', 'Migration Date', 'Notes']];
+    for (const row of table.tBodies[0].rows) {
+        const cells = row.cells;
+        if (cells.length < 10) continue;
+        rows.push([
+            ...Array.from(cells).slice(2, 9).map(cell => cell.innerText.trim()),
+            cells[9].querySelector('input')?.value ?? '',
+            cells[9].querySelector('textarea')?.value ?? '',
+        ]);
+    }
 
-        rows.forEach(row => {
-            const cols = row.querySelectorAll("td");
-            if (cols.length < 5) return; // Salta righe vuote o caricate male
-
-            let rowData = [];
-
-            if (sourceLabel === "Unified") {
-                // Mapping per la tabella principale (Ivanti + Sat)
-                // Usiamo l'hostname Ivanti o quello Satellite se Ivanti manca
-                let hostname = cols[1].innerText.trim() || cols[5].innerText.trim();
-                let os = cols[2].innerText.trim();
-                let ip = cols[3].innerText.trim();
-                let lastDate = cols[11].innerText.replace('⏳', '').trim(); // Last Checkin Sat
-                let kernel = cols[8].innerText.replace('MISSING', '').trim();
-                let cvEnv = cols[9].innerText.replace('MISSING', '').trim();
-
-                const noteCell = cols[12];
-                let migDate = noteCell.querySelector('input') ? noteCell.querySelector('input').value : '';
-                let noteText = noteCell.querySelector('textarea') ? noteCell.querySelector('textarea').value : '';
-
-                rowData = [sourceLabel, hostname, os, ip, lastDate, kernel, cvEnv, migDate, noteText];
-            } else {
-                // Mapping per la tabella Satellite Only (quella in fondo)
-                let hostname = cols[2].innerText.trim();
-                let os = cols[3].innerText.trim();
-                let ip = cols[4].innerText.trim();
-                let lastDate = cols[8].innerText.trim();
-                let kernel = cols[5].innerText.trim();
-                let cvEnv = cols[6].innerText.trim();
-
-                const noteCell = cols[9];
-                let migDate = noteCell.querySelector('input') ? noteCell.querySelector('input').value : '';
-                let noteText = noteCell.querySelector('textarea') ? noteCell.querySelector('textarea').value : '';
-
-                rowData = ["SatOnly", hostname, os, ip, lastDate, kernel, cvEnv, migDate, noteText];
-            }
-
-            // Pulizia e formattazione CSV (escaping virgolette)
-            let formattedRow = rowData.map(text => {
-                let s = (text || '').toString().replace(/\n/g, " ").replace(/"/g, '""').trim();
-                return `"${s}"`;
-            });
-            csv.push(formattedRow.join(","));
-        });
-    };
-
-    // --- ESECUZIONE SULLE DUE TABELLE ---
-    // Nota: assicurati che la seconda tabella abbia un ID o cercala per classe
-    processTable("mainInventoryTable", "Unified");
-
-    processTable("satelliteOnlyTable", "SatOnly");
-
-    // --- DOWNLOAD DEL FILE ---
-    const csvString = "\uFEFF" + csv.join("\n"); // Aggiunge BOM per far leggere correttamente le accentate a Excel
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `patching_report_global_${timestamp}.csv`);
-    link.style.visibility = 'hidden';
+    const csv = rows.map(row => row.map(value => {
+        const safe = /^[=+\-@\t\r\n]/.test(value) ? "'" + value : value;
+        return '"' + safe.replace(/"/g, '""') + '"';
+    }).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], {type: 'text/csv;charset=utf-8'}));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'satellite_inventory_' + new Date().toISOString().slice(0, 10) + '.csv';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 

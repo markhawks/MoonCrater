@@ -50,9 +50,22 @@ try {
     exit('Application configuration error. Contact the administrator.');
 }
 
+$externalDashboardSections = [
+    'unified' => 'Unified Inventory View',
+    'active' => 'External Active',
+    'os' => 'External OS Distribution',
+    'missing' => 'Missing in Satellite',
+    'coverage' => 'Coverage',
+];
+$externalDashboardVisibility = array_fill_keys(array_keys($externalDashboardSections), false);
+
 if (!defined('APP_MIGRATING')) {
     try {
-        $storedSettings = $pdo->query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('customer_logo_data', 'customer_name')")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $storedSettings = $pdo->query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('customer_logo_data', 'customer_name', 'external_dashboard_sections')")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $visibility = json_decode($storedSettings['external_dashboard_sections'] ?? '{}', true);
+        foreach ($externalDashboardVisibility as $key => $default) {
+            $externalDashboardVisibility[$key] = ($visibility[$key] ?? $default) === true;
+        }
         $storedCustomerName = $storedSettings['customer_name'] ?? null;
         if (is_string($storedCustomerName) && trim($storedCustomerName) !== '' && mb_strlen($storedCustomerName) <= 100) {
             $customerName = trim($storedCustomerName);

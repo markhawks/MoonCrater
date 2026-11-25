@@ -11,7 +11,7 @@ if (is_valid_hostname($hostname) && in_array($action, ['exclude', 'activate'], t
     $status = $action === 'activate' ? 'active' : 'excluded';
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('UPDATE inventory_ivanti SET status = ? WHERE hostname = ?');
+        $stmt = $pdo->prepare('UPDATE inventory_external SET status = ? WHERE hostname = ?');
         $stmt->execute([$status, $hostname]);
         $stmt = $pdo->prepare('UPDATE inventory_satellite SET status = ? WHERE hostname = ?');
         $stmt->execute([$status, $hostname]);
