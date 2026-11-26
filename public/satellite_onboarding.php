@@ -7,34 +7,58 @@ require_once APP_ROOT . '/onboarding/registration.php';
 require_once APP_ROOT . '/app/Domain/inventory.php';
 require_admin($pdo);
 
-function onboardingResolveFqdn(string $hostname): ?string
+function onboardingGetentHosts(string $query, float $deadline): array
 {
-    if (!function_exists('proc_open') || !is_valid_hostname($hostname)) return null;
+    if (microtime(true) >= $deadline || !function_exists('proc_open') || !is_valid_hostname($query)) return [];
     $process = proc_open(
-        ['/usr/bin/timeout', '1s', '/usr/bin/getent', 'hosts', $hostname],
+        ['/usr/bin/timeout', '1s', '/usr/bin/getent', 'hosts', $query],
         [['file', '/dev/null', 'r'], ['pipe', 'w'], ['file', '/dev/null', 'w']],
         $pipes
     );
-    if (!is_resource($process)) return null;
+    if (!is_resource($process)) return [];
     $output = stream_get_contents($pipes[1], 8192);
     fclose($pipes[1]);
-    if (proc_close($process) !== 0 || !is_string($output)) return null;
-    $names = [];
+    if (proc_close($process) !== 0 || !is_string($output)) return [];
+    $records = [];
     foreach (preg_split('/\R/', trim($output)) as $line) {
         $fields = preg_split('/\s+/', trim($line));
         $name = rtrim(strtolower($fields[1] ?? ''), '.');
-        if (str_contains($name, '.') && !filter_var($name, FILTER_VALIDATE_IP) && is_valid_hostname($name)) {
-            $names[$name] = true;
+        if (filter_var($fields[0] ?? '', FILTER_VALIDATE_IP) && $name !== ''
+            && !filter_var($name, FILTER_VALIDATE_IP) && is_valid_hostname($name)) {
+            $records[] = ['ip' => $fields[0], 'name' => $name];
         }
     }
-    return count($names) === 1 ? array_key_first($names) : null;
+    return $records;
+}
+
+function onboardingResolveFqdn(string $hostname, callable $lookup): array
+{
+    $forward = $lookup($hostname);
+    $forwardNames = array_unique(array_column($forward, 'name'));
+    $reverseNames = [];
+    $confirmed = [];
+    foreach (array_unique(array_column($forward, 'ip')) as $ip) {
+        foreach ($lookup($ip) as $record) {
+            $name = $record['name'];
+            $reverseNames[$name] = true;
+            if (!str_contains($name, '.') || str_ends_with($name, '.local')) continue;
+            foreach ($lookup($name) as $verified) {
+                if (inet_pton($verified['ip']) === inet_pton($ip)) $confirmed[$name] = true;
+            }
+        }
+    }
+    return [
+        'fqdn' => count($confirmed) === 1 ? array_key_first($confirmed) : null,
+        'forward' => array_values($forwardNames),
+        'reverse' => array_keys($reverseNames),
+    ];
 }
 
 function matchSatelliteInventory(PDO $pdo, array $hostnames): array
 {
     if (!$hostnames) return [];
 
-    $live = onboardingHammerInventory();
+    $live = onboardingHammerInventory($hostnames);
     if ($live === null) {
     $marks = implode(',', array_fill(0, count($hostnames), '?'));
     $statement = $pdo->prepare("
@@ -71,12 +95,22 @@ function matchSatelliteInventory(PDO $pdo, array $hostnames): array
             $seen[$record['name']] = true;
         }
         $fqdn = null;
+        $dns = null;
         if (count($matches) <= 1) {
             $candidate = $record['name'] ?? $hostname;
-            $fqdn = str_contains($candidate, '.') ? $candidate :
-                (microtime(true) < $dnsDeadline ? onboardingResolveFqdn($candidate) : null);
+            if (str_contains($candidate, '.') && !str_ends_with($candidate, '.local')) {
+                $fqdn = $candidate;
+            } elseif (microtime(true) < $dnsDeadline) {
+                $dns = onboardingResolveFqdn($candidate, static fn (string $query): array => onboardingGetentHosts($query, $dnsDeadline));
+                $fqdn = $dns['fqdn'];
+            }
         }
         if ($fqdn !== null) {
+            if (!$matches && isset($byName[$fqdn])) {
+                $matches = $byName[$fqdn];
+                $record = reset($matches);
+                $status = in_array($record['status'], ['active', 'unhealthy'], true) ? 'registered' : 'historical';
+            }
             if (isset($seenFqdns[$fqdn])) $status = 'duplicate';
             $seenFqdns[$fqdn] = true;
         }
@@ -87,6 +121,7 @@ function matchSatelliteInventory(PDO $pdo, array $hostnames): array
             'last_checkin' => $record['last_checkin'] ?? '',
             'source' => $live === null ? 'local' : 'hammer',
             'fqdn' => $fqdn,
+            'dns' => $dns,
         ];
     }
     return $result;
@@ -121,23 +156,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && in_array($_POST['action'] ?
             $selectedHosts[$hostname] = $draft['hosts'][$hostname];
         }
         if ($failure === '') {
-            try {
-                $currentHosts = matchSatelliteInventory($pdo, array_keys($selectedHosts));
-                foreach ($currentHosts as $host) {
-                    $previous = $selectedHosts[$host['hostname']];
-                    if ($host['source'] !== $previous['source'] || $host['status'] !== $previous['status']
-                        || $host['matches'] !== $previous['matches'] || $host['fqdn'] !== ($previous['fqdn'] ?? null)) {
-                        $failure = 'The inventory or lookup source changed. Validate the inventory again.';
-                        $preview = null;
-                        unset($_SESSION['satellite_onboarding_preview']);
-                        break;
-                    }
-                    $needsReregistration = $needsReregistration || $host['status'] === 'registered';
-                }
-                if ($failure === '') $review = $currentHosts;
-            } catch (RuntimeException | JsonException $e) {
-                error_log('Satellite Onboarding review lookup failed: ' . $e->getMessage());
-                $failure = 'Satellite precheck unavailable. Check the server log and validate again.';
+            // Reuse the server-side preview. The worker rechecks before registration.
+            $review = array_values($selectedHosts);
+            foreach ($review as $host) {
+                $needsReregistration = $needsReregistration || $host['status'] === 'registered';
             }
         }
         if ($review && ($_POST['action'] ?? '') === 'confirm') {
@@ -339,7 +361,13 @@ $statusLabels = [
                                 <?= in_array($host['hostname'], array_column($review, 'hostname'), true) ? 'checked' : '' ?>
                                 <?= $preview['errors'] || in_array($host['status'], ['ambiguous', 'duplicate'], true) ? 'disabled' : '' ?>></td>
                             <td><?= htmlspecialchars($host['hostname']) ?></td>
-                            <td><?= htmlspecialchars($host['fqdn'] ?? '—') ?></td>
+                            <td>
+                                <?= htmlspecialchars($host['fqdn'] ?? '—') ?>
+                                <?php if (!empty($host['dns']['forward']) && $host['dns']['forward'] !== $host['dns']['reverse']): ?>
+                                    <div class="muted">Forward: <?= htmlspecialchars(implode(', ', $host['dns']['forward'])) ?></div>
+                                    <div class="muted">Reverse: <?= htmlspecialchars(implode(', ', $host['dns']['reverse']) ?: '—') ?></div>
+                                <?php endif; ?>
+                            </td>
                             <td><?= htmlspecialchars(implode(', ', $host['matches']) ?: '—') ?></td>
                             <td><?= htmlspecialchars($host['last_checkin'] ?: '—') ?></td>
                             <td><?= htmlspecialchars($statusLabels[$host['status']]) ?> (<?= $host['source'] === 'hammer' ? 'Hammer' : 'local inventory' ?>)</td>

@@ -2,6 +2,13 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.54] - 2026-11-26
+
+- Batched live Hammer lookups by requested hostname and reused the preview during review.
+- Compared forward and reverse DNS during FQDN resolution and rejected unconfirmed local aliases.
+- Added proxy configuration support to the RPM updater.
+- Added Satellite wrapper configuration examples and deployment instructions.
+
 ## [1.53] - 2026-11-26
 
 - Added opt-in Satellite registration from the portal with live Hammer verification and per-host PostgreSQL inventory updates.

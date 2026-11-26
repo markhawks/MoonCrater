@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /** Return null only when the live profile has not been provisioned. */
-function onboardingHammerInventory(): ?array
+function onboardingHammerInventory(array $hostnames): ?array
 {
     $path = '/etc/mooncrater/onboarding-hammer.json';
     if (!file_exists($path)) return null;
@@ -15,6 +15,30 @@ function onboardingHammerInventory(): ?array
         || !is_string($user) || !preg_match('/\A[a-z_][a-z0-9_-]*\z/i', $user)) {
         throw new RuntimeException('Invalid Hammer SSH profile.');
     }
+    $records = [];
+    $hostnames = array_values(array_unique($hostnames));
+    $batch = [];
+    $batchBytes = 0;
+    foreach ($hostnames as $name) {
+        if (!is_string($name) || strlen($name) > 253
+            || !preg_match('/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\z/', $name)) {
+            throw new RuntimeException('Invalid Hammer lookup hostname.');
+        }
+        $length = str_contains($name, '.') ? strlen($name) + 30 : 2 * strlen($name) + 63;
+        if ($batch && ($batchBytes + $length > 6500 || count($batch) === 100)) {
+            array_push($records, ...onboardingHammerBatch($user, $host, $batch));
+            $batch = [];
+            $batchBytes = 0;
+        }
+        $batch[] = $name;
+        $batchBytes += $length;
+    }
+    if ($batch) array_push($records, ...onboardingHammerBatch($user, $host, $batch));
+    return $records;
+}
+
+function onboardingHammerBatch(string $user, string $host, array $batch): array
+{
     $process = proc_open([
         '/usr/bin/timeout', '20s', '/usr/bin/ssh', '-F', '/dev/null',
         '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
@@ -22,14 +46,17 @@ function onboardingHammerInventory(): ?array
         '-o', 'IdentitiesOnly=yes', '-i', PHP_SAPI === 'cli'
             ? (getenv('MOONCRATER_HAMMER_KEY') ?: '/etc/mooncrater/onboarding_ssh_key')
             : '/etc/mooncrater/onboarding_ssh_key',
-        $user . '@' . $host, 'mooncrater-host-list',
-    ], [['file', '/dev/null', 'r'], ['pipe', 'w'], ['file', '/dev/null', 'w']], $pipes);
+        $user . '@' . $host, 'mooncrater-host-search',
+    ], [['pipe', 'r'], ['pipe', 'w'], ['file', '/dev/null', 'w']], $pipes);
     if (!is_resource($process)) throw new RuntimeException('Unable to start Hammer SSH lookup.');
+    $input = implode("\n", $batch) . "\n";
+    $written = fwrite($pipes[0], $input);
+    fclose($pipes[0]);
     $output = stream_get_contents($pipes[1], 8 * 1024 * 1024 + 1);
     fclose($pipes[1]);
     $exitCode = proc_close($process);
-    if ($exitCode !== 0 || !is_string($output) || strlen($output) > 8 * 1024 * 1024) {
-        throw new RuntimeException('Hammer SSH lookup failed or exceeded its output limit.');
+    if ($written !== strlen($input) || $exitCode !== 0 || !is_string($output) || strlen($output) > 8 * 1024 * 1024) {
+        throw new RuntimeException('Hammer search failed. Check SSH and the Satellite wrapper version.');
     }
     return parseOnboardingHammerHosts($output);
 }

@@ -11,6 +11,7 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 source_arg=$1
 expected_digest=${2,,}
 config=/etc/mooncrater/apache-env.conf
+proxy_config=/etc/mooncrater/update-proxy.env
 backup_dir=/opt/mooncrater/var/backups
 [[ -r $config ]] || die "Missing installed configuration: $config"
 rpm -q mooncrater >/dev/null || die 'MoonCrater must already be installed via RPM.'
@@ -19,6 +20,24 @@ rpm -q mooncrater >/dev/null || die 'MoonCrater must already be installed via RP
 
 exec 9>/run/mooncrater-rpm-update.lock
 flock -n 9 || die 'Another MoonCrater RPM update is running.'
+
+# A server-side file remains available when sudo filters the caller's environment.
+if [[ -e $proxy_config || -L $proxy_config ]]; then
+    [[ -f $proxy_config && ! -L $proxy_config ]] || die 'Invalid update proxy configuration file.'
+    read -r proxy_owner proxy_mode < <(stat -c '%u %a' "$proxy_config")
+    [[ $proxy_owner == 0 && $proxy_mode == 600 ]] || die 'Update proxy configuration must be owned by root and mode 0600.'
+    while IFS= read -r line || [[ -n $line ]]; do
+        case "$line" in
+            ''|'#'*) continue ;;
+            http_proxy=*|https_proxy=*|all_proxy=*|no_proxy=*)
+                name=${line%%=*}
+                value=${line#*=}
+                export "$name=$value" "${name^^}=$value"
+                ;;
+            *) die 'Unknown entry in update proxy configuration.' ;;
+        esac
+    done < "$proxy_config"
+fi
 
 read_db_setting() {
     local key=$1

@@ -11,7 +11,7 @@
 Portale PHP/PostgreSQL per correlare gli inventari Linux provenienti da External,
 Red Hat Satellite e Zabbix.
 
-Versione applicativa corrente: **1.53**.
+Versione applicativa corrente: **1.54**.
 
 Asset branding:
 
@@ -42,12 +42,12 @@ Vedere `docs/ARCHITECTURE.md` per i confini e le responsabilità delle directory
 
 ## Installazione RPM su RHEL 10.3
 
-Per una nuova istanza, scaricare `mooncrater-1.53-1.el10.noarch.rpm` dalla
-[release MoonCrater 1.53](https://github.com/markhawks/MoonCrater/releases/tag/v1.53).
+Per una nuova istanza, scaricare `mooncrater-1.54-1.el10.noarch.rpm` dalla
+[release MoonCrater 1.54](https://github.com/markhawks/MoonCrater/releases/tag/v1.54).
 Con i repository RHEL abilitati, eseguire:
 
 ```bash
-sudo dnf install ./mooncrater-1.53-1.el10.noarch.rpm
+sudo dnf install ./mooncrater-1.54-1.el10.noarch.rpm
 sudo mooncrater-setup
 ```
 

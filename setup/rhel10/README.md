@@ -8,11 +8,11 @@ development and production. The target server needs access to its enabled RHEL p
 
 ## Fresh installation from RPM
 
-Download the unsigned RPM from the [MoonCrater 1.53 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.53).
+Download the unsigned RPM from the [MoonCrater 1.54 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.54).
 On RHEL 10.3 with package repositories enabled:
 
 ```bash
-sudo dnf install ./mooncrater-1.53-1.el10.noarch.rpm
+sudo dnf install ./mooncrater-1.54-1.el10.noarch.rpm
 sudo mooncrater-setup
 ```
 
@@ -62,6 +62,11 @@ certificate source.
 
 ## Updating an existing installation
 
+If an installation uses live Hammer prechecks, deploy the
+[Satellite wrapper and configuration](../satellite/README.md#onboarding-precheck-with-hammer)
+before upgrading MoonCrater to 1.54. For first-time setups, use the
+[`onboarding-hammer.json` example](onboarding-hammer.json.example).
+
 For future RPM updates, run `setup/rhel10/update-rpm.sh` as root with a local
 RPM path or a MoonCrater GitHub release asset URL and the independently
 obtained SHA-256 digest. The installed copy is under `/opt/mooncrater/setup/rhel10/`
@@ -77,11 +82,17 @@ dump in `/opt/mooncrater/var/backups/`, upgrades the package, runs migrations,
 and reloads Apache and PHP-FPM. It stops on errors and reports the backup
 path for manual recovery.
 
-For an RPM-managed server upgrading from 1.52 to 1.53, back up PostgreSQL,
+For a server behind a proxy, create the root-owned file
+`/etc/mooncrater/update-proxy.env` with permissions `0600`. Use literal
+`https_proxy=...`, `http_proxy=...`, `all_proxy=...` or `no_proxy=...`
+entries, one per line, without shell quotes or `export`. Both the RPM download
+and DNF inherit these settings. DNF also honors its system configuration.
+
+For an RPM-managed server upgrading from 1.53 to 1.54, back up PostgreSQL,
 install the new RPM, and apply the additive onboarding migrations:
 
 ```bash
-sudo dnf upgrade ./mooncrater-1.53-1.el10.noarch.rpm
+sudo dnf upgrade ./mooncrater-1.54-1.el10.noarch.rpm
 sudo php /opt/mooncrater/bin/migrate.php --apache-env
 sudo apachectl configtest
 sudo systemctl reload php-fpm httpd

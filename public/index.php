@@ -474,6 +474,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.54' => [
+            'date' => '2026-11-26',
+            'changes' => [
+                'Batched live Hammer lookups and reused the precheck during review.',
+                'Added forward and reverse DNS comparison for FQDN resolution.',
+                'Added updater proxy settings and Satellite deployment examples.',
+            ],
+        ],
         '1.53' => [
             'date' => '2026-11-26',
             'changes' => [

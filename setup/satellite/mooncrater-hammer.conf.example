@@ -1,0 +1,2 @@
+# Copy to /etc/mooncrater-hammer.conf on the Satellite server.
+MOONCRATER_SATELLITE_ORGANIZATION='Example Organization'

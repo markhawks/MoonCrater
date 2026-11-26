@@ -108,3 +108,49 @@ files already recorded in the database. A failed file is retried on the next run
 
 The Satellite exporter also works with MoonCrater 1.51 installed via RPM. Complete
 the [MoonCrater server setup](../rhel10/README.md) before configuring SSH delivery.
+## Onboarding precheck with Hammer
+
+MoonCrater 1.54 queries SSH command `mooncrater-host-search` with a list of
+hostnames on standard input. Install the updated wrapper before upgrading
+MoonCrater. Copy these files from the release to the Satellite server:
+
+| Release file | Destination on Satellite | Mode |
+|---|---|---|
+| `mooncrater-hammer-readonly` | `/usr/local/sbin/mooncrater-hammer-readonly` | `0755` |
+| `mooncrater-hammer.conf.example` | `/etc/mooncrater-hammer.conf` | `0600` |
+
+From the directory containing the files, as root on Satellite:
+
+```bash
+install -o root -g root -m 0755 mooncrater-hammer-readonly /usr/local/sbin/mooncrater-hammer-readonly
+if test ! -e /etc/mooncrater-hammer.conf; then
+    install -o root -g root -m 0600 mooncrater-hammer.conf.example /etc/mooncrater-hammer.conf
+fi
+```
+
+Set `MOONCRATER_SATELLITE_ORGANIZATION` in the configuration to the organization
+the Hammer account may query. For a new setup, add each MoonCrater public key
+to that SSH account's `authorized_keys` with this prefix:
+
+```text
+restrict,command="/usr/local/sbin/mooncrater-hammer-readonly" ssh-ed25519 PUBLIC_KEY
+```
+
+On MoonCrater, configure `/etc/mooncrater/onboarding-hammer.json` from the
+[example](../rhel10/onboarding-hammer.json.example). Pin Satellite's verified
+SSH host key and provision the separate web and worker keys as described in
+the [onboarding guide](../../docs/SATELLITE_ONBOARDING.md).
+
+Test the filtered command from MoonCrater with a known hostname:
+
+```bash
+printf '%s\n' host.example.test |
+  sudo -u apache ssh -F /dev/null -o BatchMode=yes -o StrictHostKeyChecking=yes \
+    -o IdentitiesOnly=yes -o IdentityAgent=none \
+    -o UserKnownHostsFile=/etc/mooncrater/onboarding_known_hosts \
+    -i /etc/mooncrater/onboarding_ssh_key \
+    HAMMER_USER@SATELLITE_FQDN mooncrater-host-search
+```
+
+A known host returns an English JSON object inside the array. A successful
+search with no matches returns an empty array.

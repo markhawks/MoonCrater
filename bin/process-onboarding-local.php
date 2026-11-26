@@ -71,7 +71,7 @@ if ($mode === 'registration') {
             $protected->execute([$fqdn]);
             if ($protected->fetchColumn() !== false) throw new RuntimeException('Infrastructure host is protected.');
             $find = static function () use ($fqdn): array {
-                $inventory = onboardingHammerInventory();
+                $inventory = onboardingHammerInventory([$fqdn]);
                 if ($inventory === null) throw new RuntimeException('Live Hammer is required.');
                 return array_values(array_filter($inventory, static fn (array $row): bool => $row['name'] === $fqdn));
             };

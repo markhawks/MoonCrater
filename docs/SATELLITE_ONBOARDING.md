@@ -44,7 +44,11 @@ On MoonCrater, provision `/etc/mooncrater/onboarding-hammer.json` with keys
 The PHP runtime account needs read access. Restrict the private key to that
 account with mode 0600. A configured profile fails the precheck on SSH, Hammer,
 or output errors. With no profile, the precheck uses the local import. The
-current adapter reads the Hammer host list. The wrapper forces English output
+precheck sends requested hostnames in small batches to the wrapper's
+`mooncrater-host-search` command. Deploy the updated wrapper on Satellite
+before upgrading MoonCrater. The review step reuses the server-side preview,
+and the registration worker repeats an exact lookup before Ansible runs.
+The wrapper forces English output
 with `LANG=C.UTF-8 LC_ALL=C.UTF-8 LANGUAGE=en`. A missing check-in field remains blank.
 
 The local worker only runs the fixed localhost test playbook. On a standard

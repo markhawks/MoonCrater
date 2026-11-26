@@ -1,10 +1,33 @@
 #!/usr/bin/bash
 set -euo pipefail
 
-[[ ${SSH_ORIGINAL_COMMAND:-} == mooncrater-host-list ]] || exit 64
+case "${SSH_ORIGINAL_COMMAND:-}" in
+    mooncrater-host-list|mooncrater-host-search) ;;
+    *) exit 64 ;;
+esac
 # Define the Satellite organization here on the Satellite server.
 source /etc/mooncrater-hammer.conf
 : "${MOONCRATER_SATELLITE_ORGANIZATION:?Missing Satellite organization}"
 export LANG=C.UTF-8 LC_ALL=C.UTF-8 LANGUAGE=en
+
+if [[ $SSH_ORIGINAL_COMMAND == mooncrater-host-search ]]; then
+    search=''
+    count=0
+    label='[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?'
+    while IFS= read -r name; do
+        [[ ${#name} -le 253 && $name =~ ^$label(\.$label)*$ ]] || exit 65
+        (( ++count <= 100 )) || exit 65
+        if [[ $name == *.* ]]; then
+            clause="name = \"$name\""
+        else
+            clause="(name = \"$name\" or name ~ \"$name.%\")"
+        fi
+        search="${search:+$search or }$clause"
+    done
+    [[ -n $search ]] || exit 65
+    exec /usr/bin/hammer --output json host list \
+        --organization "$MOONCRATER_SATELLITE_ORGANIZATION" --per-page all --search "$search"
+fi
+
 exec /usr/bin/hammer --output json host list \
     --organization "$MOONCRATER_SATELLITE_ORGANIZATION" --per-page all
