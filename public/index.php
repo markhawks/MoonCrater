@@ -474,6 +474,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.53' => [
+            'date' => '2026-11-26',
+            'changes' => [
+                'Added opt-in Satellite registration with live verification and automatic inventory updates.',
+                'Added per-job target SSH credentials over HTTPS and FQDN resolution.',
+                'Added an RPM updater with PostgreSQL backup and package verification.',
+            ],
+        ],
         '1.52' => [
             'date' => '2026-11-26',
             'changes' => [

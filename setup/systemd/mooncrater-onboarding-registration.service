@@ -1,0 +1,20 @@
+[Unit]
+Description=MoonCrater Satellite registration worker
+After=postgresql.service network-online.target
+ConditionPathExists=/etc/mooncrater/onboarding-registration.enabled
+ConditionPathExists=/etc/mooncrater/onboarding-ansible.cfg
+
+[Service]
+Type=oneshot
+User=mooncrater-onboard
+Group=mooncrater-onboard
+EnvironmentFile=-/etc/mooncrater/onboarding-worker.env
+StateDirectory=mooncrater-onboarding
+StateDirectoryMode=0700
+ExecStart=/usr/bin/php /opt/mooncrater/bin/process-onboarding-local.php --registration
+NoNewPrivileges=yes
+PrivateTmp=yes
+TemporaryFileSystem=/dev/shm:mode=1777
+ProtectSystem=strict
+ProtectHome=yes
+TimeoutStartSec=2h30min

@@ -1,6 +1,6 @@
 Name:           mooncrater
-Version:        1.52
-Release:        2%{?dist}
+Version:        1.53
+Release:        1%{?dist}
 Summary:        Linux infrastructure inventory and migration portal
 License:        AGPL-3.0-or-later
 URL:            https://github.com/markhawks/MoonCrater
@@ -9,7 +9,7 @@ BuildArch:      noarch
 
 Requires:       httpd, php, php-cli, php-fpm, php-pgsql, php-mbstring
 Requires:       postgresql, postgresql-server, policycoreutils-python-utils
-Requires:       firewalld, openssh-server, openssh-clients, systemd, util-linux, hostname, python3, ansible-core
+Requires:       firewalld, openssh-server, openssh-clients, systemd, util-linux, hostname, python3, ansible-core, sshpass, openssl
 
 %description
 MoonCrater correlates Satellite and external Linux inventories and tracks RHEL

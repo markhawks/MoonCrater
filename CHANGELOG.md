@@ -2,6 +2,12 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.53] - 2026-11-26
+
+- Added opt-in Satellite registration from the portal with live Hammer verification and per-host PostgreSQL inventory updates.
+- Added per-job target SSH credentials over HTTPS, encrypted queue storage, and the pinned Foreman collection manifest.
+- Added FQDN resolution and the RPM updater with database backup and package digest verification.
+
 ## [1.52] - 2026-11-26
 
 - Added an administrator-only Satellite Onboarding preview with inventory validation, selection review, and simulation history.

@@ -1,0 +1,124 @@
+---
+- name: Register an approved MoonCrater target
+  hosts: all
+  gather_facts: true
+  vars:
+    satellite_location: PROD
+  tasks:
+    - name: Read site information
+      ansible.builtin.command: shado
+      changed_when: false
+      register: site_info
+
+    - name: Read canonical hostname
+      ansible.builtin.command: hostname -f
+      changed_when: false
+      register: canonical_hostname
+
+    - name: Verify the target identity before modifying it
+      ansible.builtin.assert:
+        that: (canonical_hostname.stdout | trim | lower) == (inventory_hostname | lower)
+
+    - name: Parse site information
+      ansible.builtin.set_fact:
+        site_code: "{{ site_info.stdout | regex_findall('(?im)^SiteCode=(.+)$') | first | trim }}"
+        site_description: "{{ site_info.stdout | regex_findall('(?im)^SiteDescription=(.+)$') | first | trim }}"
+        site_extended_code: "{{ site_info.stdout | regex_findall('(?im)^SiteCodeEx=(.+)$') | first | trim }}"
+
+    - name: Determine registration profile
+      ansible.builtin.set_fact:
+        collection_name: "{{ site_extended_code }} - {{ site_description }}"
+        location_name: "{{ 'NPE' if site_code == 'HP0' or site_code.startswith('X') else satellite_location }}"
+        activation_key: >-
+          {%- if site_description.startswith('TF COD') -%}rh{{ ansible_distribution_major_version }}npe-tf-cod
+          {%- elif site_description.startswith('TF COLLMASK') -%}rh{{ ansible_distribution_major_version }}npe-tf-mask
+          {%- elif site_description.startswith('TF COLL') -%}rh{{ ansible_distribution_major_version }}npe-tf-coll
+          {%- elif site_code == 'HP0' -%}{{ hp0_activation_key }}
+          {%- else -%}rh{{ ansible_distribution_major_version }}prod
+          {%- endif -%}
+
+    - name: Create or find the host collection
+      theforeman.foreman.host_collection:
+        server_url: "{{ satellite_host }}"
+        username: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        organization: "{{ satellite_organization }}"
+        name: "{{ collection_name }}"
+        state: present
+        validate_certs: true
+      delegate_to: localhost
+      no_log: true
+
+    - name: Generate the registration command
+      theforeman.foreman.registration_command:
+        server_url: "{{ satellite_host }}"
+        username: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        organization: "{{ satellite_organization }}"
+        location: "{{ location_name }}"
+        activation_keys: "{{ activation_key }}"
+        smart_proxy: "{{ capsule[location_name] }}"
+        validate_certs: true
+        insecure: false
+        force: "{{ mooncrater_force | bool }}"
+        setup_insights: true
+        setup_remote_execution: true
+      delegate_to: localhost
+      no_log: true
+      register: registration
+
+    - name: Execute the Satellite registration command
+      ansible.builtin.shell:
+        cmd: "{{ registration.entity.registration_commands[0].registration_command }}"
+        executable: /bin/bash
+      no_log: true
+
+    - name: Find the registered host in the expected organization
+      theforeman.foreman.host_info:
+        server_url: "{{ satellite_host }}"
+        username: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        organization: "{{ satellite_organization }}"
+        name: "{{ inventory_hostname }}"
+        validate_certs: true
+      delegate_to: localhost
+      no_log: true
+      register: registered_host
+      until: registered_host is succeeded
+      retries: 5
+      delay: 3
+
+    - name: Find the host collection ID
+      theforeman.foreman.resource_info:
+        server_url: "{{ satellite_host }}"
+        username: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        organization: "{{ satellite_organization }}"
+        resource: host_collections
+        search: 'name = "{{ collection_name }}"'
+        validate_certs: true
+      delegate_to: localhost
+      no_log: true
+      register: collection_lookup
+
+    - name: Verify unambiguous registration and collection IDs
+      ansible.builtin.assert:
+        that:
+          - registered_host.hosts | length == 1
+          - collection_lookup.resources | length == 1
+      no_log: true
+
+    - name: Add the host without changing existing collection members
+      ansible.builtin.uri:
+        url: "{{ satellite_host }}/katello/api/v2/host_collections/{{ collection_lookup.resources[0].id }}/add_hosts"
+        method: PUT
+        url_username: "{{ satellite_user }}"
+        url_password: "{{ satellite_password }}"
+        force_basic_auth: true
+        validate_certs: true
+        body_format: json
+        body:
+          host_ids: ["{{ registered_host.hosts[0].id | int }}"]
+        status_code: [200, 204]
+      delegate_to: localhost
+      no_log: true

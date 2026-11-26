@@ -19,7 +19,9 @@ function onboardingHammerInventory(): ?array
         '/usr/bin/timeout', '20s', '/usr/bin/ssh', '-F', '/dev/null',
         '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
         '-o', 'UserKnownHostsFile=/etc/mooncrater/onboarding_known_hosts',
-        '-o', 'IdentitiesOnly=yes', '-i', '/etc/mooncrater/onboarding_ssh_key',
+        '-o', 'IdentitiesOnly=yes', '-i', PHP_SAPI === 'cli'
+            ? (getenv('MOONCRATER_HAMMER_KEY') ?: '/etc/mooncrater/onboarding_ssh_key')
+            : '/etc/mooncrater/onboarding_ssh_key',
         $user . '@' . $host, 'mooncrater-host-list',
     ], [['file', '/dev/null', 'r'], ['pipe', 'w'], ['file', '/dev/null', 'w']], $pipes);
     if (!is_resource($process)) throw new RuntimeException('Unable to start Hammer SSH lookup.');
@@ -41,10 +43,15 @@ function parseOnboardingHammerHosts(string $output): array
         $name = $row['Name'] ?? null;
         if (!is_string($name) || trim($name) === '') throw new RuntimeException('Missing Hammer hostname.');
         $checkin = $row['Last Checkin'] ?? $row['Last Check-in'] ?? '';
+        $os = $row['Operating System'] ?? null;
         $records[] = [
             'name' => rtrim(strtolower(trim($name)), '.'),
             'status' => 'active',
             'last_checkin' => is_string($checkin) ? $checkin : '',
+            'os' => is_array($os) ? ($os['Name'] ?? null) : $os,
+            'ip' => $row['IP'] ?? null,
+            'content_view_environment' => $row['Content View Environments'] ?? null,
+            'location' => is_array($row['Location'] ?? null) ? ($row['Location']['Name'] ?? null) : ($row['Location'] ?? null),
         ];
     }
     return $records;

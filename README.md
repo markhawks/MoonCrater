@@ -24,7 +24,7 @@ MoonCrater provides a unified operational view of Linux patching inventories. It
 missing and unhealthy hosts, tracks RHEL migration progress over time, keeps Satellite and Capsule
 infrastructure visible, and supports migration planning notes without replacing the source systems.
 
-Current application version: **1.52**.
+Current application version: **1.53**.
 
 ## Features
 
@@ -72,12 +72,12 @@ No container runtime is required.
 
 ### RPM on RHEL 10.3
 
-For a fresh installation, download `mooncrater-1.51-1.el10.noarch.rpm` from the
-[MoonCrater 1.51 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.51).
+For a fresh installation, download `mooncrater-1.53-1.el10.noarch.rpm` from the
+[MoonCrater 1.53 release](https://github.com/markhawks/MoonCrater/releases/tag/v1.53).
 With the RHEL package repositories enabled, run:
 
 ```bash
-sudo dnf install ./mooncrater-1.51-1.el10.noarch.rpm
+sudo dnf install ./mooncrater-1.53-1.el10.noarch.rpm
 sudo mooncrater-setup
 ```
 

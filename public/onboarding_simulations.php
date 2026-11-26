@@ -10,6 +10,7 @@ $job = null;
 $targets = [];
 $completed = 0;
 $error = '';
+$modeLabels = ['local_test' => 'Local Ansible Test', 'simulation' => 'Simulation', 'registration' => 'Satellite Registration'];
 try {
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         require_csrf();
@@ -35,7 +36,7 @@ try {
         if ($job) {
             $targets = json_decode($job['targets'], true, flags: JSON_THROW_ON_ERROR);
             $outcomes = json_decode($job['outcomes'], true, flags: JSON_THROW_ON_ERROR);
-            $completed = $job['mode'] === 'local_test' ? count($outcomes) : min(count($targets), max(0, (int) floor((float) $job['elapsed'] / 2)));
+            $completed = $job['mode'] !== 'simulation' ? count($outcomes) : min(count($targets), max(0, (int) floor((float) $job['elapsed'] / 2)));
         } else {
             http_response_code(404);
             $error = 'Simulation not found.';
@@ -68,7 +69,7 @@ try {
     <?php if ($error !== ''): ?><p role="alert"><?= htmlspecialchars($error) ?></p><?php endif; ?>
     <?php if ($job && $targets): ?>
         <section class="card">
-            <h2><?= $job['mode'] === 'local_test' ? 'Local Ansible Test' : 'Simulation' ?> #<?= (int) $job['id'] ?></h2>
+            <h2><?= htmlspecialchars($modeLabels[$job['mode']] ?? 'Job') ?> #<?= (int) $job['id'] ?></h2>
             <label for="progress"><?= $completed ?> of <?= count($targets) ?> completed</label>
             <progress id="progress" value="<?= $completed ?>" max="<?= count($targets) ?>" style="width:100%;"></progress>
             <table class="table">
@@ -76,8 +77,10 @@ try {
                 <tbody>
                 <?php foreach ($targets as $index => $host): ?>
                     <tr>
-                        <td><?= htmlspecialchars($host['matches'][0] ?? $host['hostname']) ?></td>
-                        <td><?php if ($job['mode'] === 'local_test'): ?>
+                        <td><?= htmlspecialchars($host['fqdn'] ?? $host['matches'][0] ?? $host['hostname']) ?></td>
+                        <td><?php if ($job['mode'] === 'registration' && isset($outcomes[$index])): ?>
+                                <?= htmlspecialchars($outcomes[$index]['state']) ?>
+                            <?php elseif ($job['mode'] !== 'simulation'): ?>
                             <?php if (isset($outcomes[$index])): ?>
                                 <?= $outcomes[$index]['exit_code'] === 0 ? 'Passed' : 'Failed' ?> (exit <?= (int) $outcomes[$index]['exit_code'] ?>)
                             <?php else: ?>
@@ -100,11 +103,11 @@ try {
                 <tbody>
                 <?php foreach ($jobs as $entry): ?>
                     <tr>
-                        <td><a style="color:#85c1e9;" href="?job=<?= (int) $entry['id'] ?>">#<?= (int) $entry['id'] ?></a> · <?= $entry['mode'] === 'local_test' ? 'Local Ansible Test' : 'Simulation' ?></td>
+                        <td><a style="color:#85c1e9;" href="?job=<?= (int) $entry['id'] ?>">#<?= (int) $entry['id'] ?></a> · <?= htmlspecialchars($modeLabels[$entry['mode']] ?? 'Job') ?></td>
                         <td><?= htmlspecialchars($entry['created_at']) ?></td>
                         <td><?= htmlspecialchars($entry['created_by']) ?></td>
                         <td><?= (int) $entry['total'] ?></td>
-                        <td><?= $entry['completed_at'] ? 'Completed' : ($entry['mode'] === 'local_test' && !$entry['started_at'] ? 'Queued' : 'In progress') ?></td>
+                        <td><?= $entry['completed_at'] ? 'Completed' : ($entry['mode'] !== 'simulation' && !$entry['started_at'] ? 'Queued' : 'In progress') ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

@@ -3,7 +3,32 @@ declare(strict_types=1);
 
 require __DIR__ . '/../app/bootstrap.php';
 require_once APP_ROOT . '/onboarding/hammer.php';
+require_once APP_ROOT . '/onboarding/registration.php';
+require_once APP_ROOT . '/app/Domain/inventory.php';
 require_admin($pdo);
+
+function onboardingResolveFqdn(string $hostname): ?string
+{
+    if (!function_exists('proc_open') || !is_valid_hostname($hostname)) return null;
+    $process = proc_open(
+        ['/usr/bin/timeout', '1s', '/usr/bin/getent', 'hosts', $hostname],
+        [['file', '/dev/null', 'r'], ['pipe', 'w'], ['file', '/dev/null', 'w']],
+        $pipes
+    );
+    if (!is_resource($process)) return null;
+    $output = stream_get_contents($pipes[1], 8192);
+    fclose($pipes[1]);
+    if (proc_close($process) !== 0 || !is_string($output)) return null;
+    $names = [];
+    foreach (preg_split('/\R/', trim($output)) as $line) {
+        $fields = preg_split('/\s+/', trim($line));
+        $name = rtrim(strtolower($fields[1] ?? ''), '.');
+        if (str_contains($name, '.') && !filter_var($name, FILTER_VALIDATE_IP) && is_valid_hostname($name)) {
+            $names[$name] = true;
+        }
+    }
+    return count($names) === 1 ? array_key_first($names) : null;
+}
 
 function matchSatelliteInventory(PDO $pdo, array $hostnames): array
 {
@@ -32,6 +57,8 @@ function matchSatelliteInventory(PDO $pdo, array $hostnames): array
 
     $result = [];
     $seen = [];
+    $seenFqdns = [];
+    $dnsDeadline = microtime(true) + 5;
     foreach ($hostnames as $hostname) {
         $matches = str_contains($hostname, '.') ? ($byName[$hostname] ?? []) : ($byShortName[$hostname] ?? []);
         $record = count($matches) === 1 ? reset($matches) : null;
@@ -43,12 +70,23 @@ function matchSatelliteInventory(PDO $pdo, array $hostnames): array
                 (in_array($record['status'], ['active', 'unhealthy'], true) ? 'registered' : 'historical');
             $seen[$record['name']] = true;
         }
+        $fqdn = null;
+        if (count($matches) <= 1) {
+            $candidate = $record['name'] ?? $hostname;
+            $fqdn = str_contains($candidate, '.') ? $candidate :
+                (microtime(true) < $dnsDeadline ? onboardingResolveFqdn($candidate) : null);
+        }
+        if ($fqdn !== null) {
+            if (isset($seenFqdns[$fqdn])) $status = 'duplicate';
+            $seenFqdns[$fqdn] = true;
+        }
         $result[] = [
             'hostname' => $hostname,
             'status' => $status,
             'matches' => array_keys($matches),
             'last_checkin' => $record['last_checkin'] ?? '',
             'source' => $live === null ? 'local' : 'hammer',
+            'fqdn' => $fqdn,
         ];
     }
     return $result;
@@ -57,6 +95,7 @@ function matchSatelliteInventory(PDO $pdo, array $hostnames): array
 $preview = null;
 $failure = '';
 $inventoryInput = '';
+$targetCredentialsAllowed = !empty($_SERVER['HTTPS']) && strcasecmp((string) $_SERVER['HTTPS'], 'off') !== 0;
 $review = [];
 $needsReregistration = false;
 $previewToken = '';
@@ -86,7 +125,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && in_array($_POST['action'] ?
                 $currentHosts = matchSatelliteInventory($pdo, array_keys($selectedHosts));
                 foreach ($currentHosts as $host) {
                     $previous = $selectedHosts[$host['hostname']];
-                    if ($host['source'] !== $previous['source'] || $host['status'] !== $previous['status'] || $host['matches'] !== $previous['matches']) {
+                    if ($host['source'] !== $previous['source'] || $host['status'] !== $previous['status']
+                        || $host['matches'] !== $previous['matches'] || $host['fqdn'] !== ($previous['fqdn'] ?? null)) {
                         $failure = 'The inventory or lookup source changed. Validate the inventory again.';
                         $preview = null;
                         unset($_SESSION['satellite_onboarding_preview']);
@@ -101,12 +141,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && in_array($_POST['action'] ?
             }
         }
         if ($review && ($_POST['action'] ?? '') === 'confirm') {
+            $realRegistration = ($_POST['mode'] ?? '') === 'registration';
+            $sealedCredentials = $realRegistration && $targetCredentialsAllowed ? onboardingSealSshCredentials(
+                $_POST['target_ssh_user'] ?? null, $_POST['target_ssh_password'] ?? null
+            ) : null;
             if ($needsReregistration && ($_POST['confirm_registered'] ?? '') !== 'yes') {
                 $failure = 'Confirm that the selection includes already registered hosts.';
+            } elseif ($realRegistration && (!onboardingRegistrationEnabled()
+                || ($_POST['confirm_registration'] ?? '') !== 'yes'
+                || count($review) > ONBOARDING_REGISTRATION_MAX_HOSTS
+                || array_filter($review, static fn ($host) => $host['source'] !== 'hammer' || !$host['fqdn']))) {
+                $failure = 'Real registration requires approval, a confirmed FQDN for each target, and live Hammer verification.';
+            } elseif ($realRegistration && !$targetCredentialsAllowed) {
+                $failure = 'Target SSH credentials require HTTPS.';
+            } elseif ($realRegistration && $sealedCredentials === null) {
+                $failure = 'Enter valid target SSH credentials and check the worker encryption configuration.';
             } else {
                 try {
-                    $statement = $pdo->prepare('INSERT INTO onboarding_simulations (created_by, targets) VALUES (?, CAST(? AS jsonb)) RETURNING id');
-                    $statement->execute([(string) $_SESSION['username'], json_encode($review, JSON_THROW_ON_ERROR)]);
+                    $statement = $pdo->prepare('INSERT INTO onboarding_simulations (created_by, targets, mode, ssh_credentials) VALUES (?, CAST(? AS jsonb), ?, ?) RETURNING id');
+                    $statement->execute([(string) $_SESSION['username'], json_encode($review, JSON_THROW_ON_ERROR), $realRegistration ? 'registration' : 'simulation', $sealedCredentials]);
                     $jobId = (int) $statement->fetchColumn();
                     unset($_SESSION['satellite_onboarding_preview']);
                     header('Location: onboarding_simulations.php?job=' . $jobId, true, 303);
@@ -224,10 +277,10 @@ $statusLabels = [
     <?php if ($review): ?>
         <section class="card">
             <h2>Review Selection</h2>
-            <p><?= count($review) ?> selected host(s). Confirmation starts a simulation.</p>
+            <p><?= count($review) ?> selected host(s).</p>
             <ul>
                 <?php foreach ($review as $host): ?>
-                    <li><?= htmlspecialchars($host['matches'][0] ?? $host['hostname']) ?> · <?= htmlspecialchars($statusLabels[$host['status']]) ?> (<?= $host['source'] === 'hammer' ? 'Hammer' : 'local inventory' ?>)</li>
+                    <li><?= htmlspecialchars($host['fqdn'] ?? $host['matches'][0] ?? $host['hostname']) ?> · <?= htmlspecialchars($statusLabels[$host['status']]) ?> (<?= $host['source'] === 'hammer' ? 'Hammer' : 'local inventory' ?>)</li>
                 <?php endforeach; ?>
             </ul>
                 <form method="post">
@@ -240,7 +293,19 @@ $statusLabels = [
                     <?php if ($needsReregistration): ?>
                         <p><label><input type="checkbox" name="confirm_registered" value="yes" required> I confirm that this selection includes hosts found in Satellite inventory.</label></p>
                     <?php endif; ?>
-                    <button type="submit">Start Simulation</button>
+                    <?php if (onboardingRegistrationEnabled() && $targetCredentialsAllowed): ?>
+                        <fieldset>
+                            <legend>Target SSH credentials for this registration</legend>
+                            <label>SSH user <input name="target_ssh_user" maxlength="64" autocomplete="off"></label>
+                            <label>SSH password <input type="password" name="target_ssh_password" maxlength="128" autocomplete="new-password"></label>
+                            <p>These credentials apply to all selected hosts.</p>
+                        </fieldset>
+                        <p><label><input type="checkbox" name="confirm_registration" value="yes"> I authorize registration and Host Collection assignment for these targets. Existing hosts in this selection will be re-registered.</label></p>
+                        <button type="submit" name="mode" value="registration">Start Satellite Registration</button>
+                    <?php elseif (onboardingRegistrationEnabled()): ?>
+                        <p>Open the portal over HTTPS to enter target SSH credentials.</p>
+                    <?php endif; ?>
+                    <button type="submit" name="mode" value="simulation">Start Simulation</button>
                 </form>
         </section>
     <?php endif; ?>
@@ -266,7 +331,7 @@ $statusLabels = [
                 <input type="hidden" name="preview_token" value="<?= htmlspecialchars($previewToken) ?>">
                 <label><input type="checkbox" id="select-all-targets" disabled> Select all</label>
                 <table class="table">
-                    <thead><tr><th scope="col">Select</th><th scope="col">Hostname</th><th scope="col">Inventory Match</th><th scope="col">Last Check-in</th><th scope="col">Status</th></tr></thead>
+                    <thead><tr><th scope="col">Select</th><th scope="col">Hostname</th><th scope="col">FQDN</th><th scope="col">Inventory Match</th><th scope="col">Last Check-in</th><th scope="col">Status</th></tr></thead>
                     <tbody>
                     <?php foreach ($preview['hosts'] as $host): ?>
                         <tr>
@@ -274,6 +339,7 @@ $statusLabels = [
                                 <?= in_array($host['hostname'], array_column($review, 'hostname'), true) ? 'checked' : '' ?>
                                 <?= $preview['errors'] || in_array($host['status'], ['ambiguous', 'duplicate'], true) ? 'disabled' : '' ?>></td>
                             <td><?= htmlspecialchars($host['hostname']) ?></td>
+                            <td><?= htmlspecialchars($host['fqdn'] ?? '—') ?></td>
                             <td><?= htmlspecialchars(implode(', ', $host['matches']) ?: '—') ?></td>
                             <td><?= htmlspecialchars($host['last_checkin'] ?: '—') ?></td>
                             <td><?= htmlspecialchars($statusLabels[$host['status']]) ?> (<?= $host['source'] === 'hammer' ? 'Hammer' : 'local inventory' ?>)</td>
