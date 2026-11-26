@@ -474,6 +474,14 @@ $total_unhealthy = $unified_unhealthy + $satonly_unhealthy;
     <?php
     // --- CHANGELOG ---
     $changelog = [
+        '1.52' => [
+            'date' => '2026-11-26',
+            'changes' => [
+                'Added the Satellite Onboarding preview, selection review, and simulation history.',
+                'Added an optional read-only Hammer precheck over SSH with English output.',
+                'Added local Ansible tests and an opt-in worker timer.',
+            ],
+        ],
         '1.51' => [
             'date' => '2026-11-25',
             'changes' => [
@@ -845,8 +853,8 @@ if (file_exists('import_satellite.php')) {
 
 
 
-    <!-- RIGA 1: 5 stat card inventory -->
-    <div style="display: grid; grid-template-columns: repeat(<?= 1 + (int) $externalDashboardVisibility['active'] + (int) $externalDashboardVisibility['missing'] + (int) $externalDashboardVisibility['coverage'] + (int) $externalDashboardVisibility['satellite_only'] ?>, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px;">
+    <div class="inventory-summary">
+    <div class="inventory-summary-counts">
 
         <?php
         // Coverage: verde se >= 90%, giallo se >= 70%, rosso sotto
@@ -865,7 +873,7 @@ if (file_exists('import_satellite.php')) {
 
         <!-- Satellite Active -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid rgba(52,152,219,0.5); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
-            <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px 48px;">
+            <div style="display:flex;align-items:stretch;flex-wrap:wrap;gap:8px 20px;">
             <div class="satellite-metric-tile">
             <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Satellite Active</div>
             <div style="display: flex; align-items: baseline; gap: 8px; line-height: 1;">
@@ -884,7 +892,7 @@ if (file_exists('import_satellite.php')) {
             <?php endif; ?>
             </div>
             <div aria-label="Satellite OS Distribution" title="Includes hosts with an unhealthy check-in"
-                 style="display:flex;flex-wrap:wrap;gap:14px 24px;">
+                 style="display:flex;flex-wrap:wrap;gap:8px;">
                 <?php foreach ([
                     ['RHEL 7', $sat_rhel7, '#e74c3c'],
                     ['RHEL 8', $sat_rhel8, '#f39c12'],
@@ -929,6 +937,10 @@ if (file_exists('import_satellite.php')) {
         </div>
         <?php endif; ?>
 
+    </div>
+    <?php if ($is_admin): ?>
+        <a class="inventory-onboarding-link" href="satellite_onboarding.php" target="_blank" rel="noopener">Satellite Onboarding</a>
+    <?php endif; ?>
     </div>
 
     <?php if ($externalDashboardVisibility['os']): ?>

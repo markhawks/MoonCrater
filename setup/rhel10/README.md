@@ -62,6 +62,19 @@ certificate source.
 
 ## Updating an existing installation
 
+For an RPM-managed server upgrading from 1.51 to 1.52, back up PostgreSQL,
+install the new RPM, and apply the additive onboarding migrations:
+
+```bash
+sudo dnf upgrade ./mooncrater-1.52-2.el10.noarch.rpm
+sudo php /opt/mooncrater/bin/migrate.php --apache-env
+sudo apachectl configtest
+sudo systemctl reload php-fpm httpd
+```
+
+For the optional Hammer precheck configuration, see
+[Satellite Onboarding](../../docs/SATELLITE_ONBOARDING.md).
+
 Pull the desired release into the original Git clone, then run the dedicated updater:
 
 ```bash

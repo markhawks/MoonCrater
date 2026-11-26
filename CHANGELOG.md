@@ -2,6 +2,13 @@
 
 All notable changes to MoonCrater are documented here. Dates use the ISO `YYYY-MM-DD` format.
 
+## [1.52] - 2026-11-26
+
+- Added an administrator-only Satellite Onboarding preview with inventory validation, selection review, and simulation history.
+- Added a read-only Hammer precheck over SSH with English JSON output enforced by the Satellite wrapper.
+- Added the localhost Ansible test worker and its opt-in systemd timer.
+- Added migrations for simulations and local test outcomes and documented the RPM upgrade procedure.
+
 ## [1.51] - 2026-11-25
 
 - Added a dashboard shortcut for importing Satellite CSV files and improved the contrast of search filters.

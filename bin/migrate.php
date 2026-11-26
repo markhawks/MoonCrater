@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli') exit(1);
+if (($argv[1] ?? '') === '--apache-env') {
+    $config = file('/etc/mooncrater/apache-env.conf', FILE_IGNORE_NEW_LINES);
+    if ($config === false) exit(1);
+    foreach ($config as $line) {
+        if (preg_match('/^\s*SetEnv\s+(DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_PASS)\s+(.+?)\s*$/', $line, $match)) {
+            putenv($match[1] . '=' . trim($match[2], '"'));
+        }
+    }
+}
 define('APP_MIGRATING', true);
 require __DIR__ . '/../app/config.php';
 

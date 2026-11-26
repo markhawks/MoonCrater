@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll the MoonCrater local Ansible test queue
+
+[Timer]
+OnBootSec=5s
+OnUnitInactiveSec=5s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

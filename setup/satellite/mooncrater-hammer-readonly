@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+[[ ${SSH_ORIGINAL_COMMAND:-} == mooncrater-host-list ]] || exit 64
+# Define the Satellite organization here on the Satellite server.
+source /etc/mooncrater-hammer.conf
+: "${MOONCRATER_SATELLITE_ORGANIZATION:?Missing Satellite organization}"
+export LANG=C.UTF-8 LC_ALL=C.UTF-8 LANGUAGE=en
+exec /usr/bin/hammer --output json host list \
+    --organization "$MOONCRATER_SATELLITE_ORGANIZATION" --per-page all

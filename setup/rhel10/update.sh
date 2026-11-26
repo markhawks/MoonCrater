@@ -129,7 +129,7 @@ info 'Preparing the new application release'
 install_parent="$(dirname "$install_dir")"
 stage_dir="$(mktemp -d "${install_parent}/.mooncrater-update.XXXXXX")"
 chmod 0755 "$stage_dir"
-for item in app bin migrations public setup tests docs README.md CHANGELOG.md SECURITY.md CONTRIBUTING.md LICENSE .env.example; do
+for item in app bin migrations onboarding public setup tests docs README.md CHANGELOG.md SECURITY.md CONTRIBUTING.md LICENSE .env.example; do
     [[ -e $source_dir/$item ]] || die "Release item missing: ${item}"
     cp -a "$source_dir/$item" "$stage_dir/"
 done

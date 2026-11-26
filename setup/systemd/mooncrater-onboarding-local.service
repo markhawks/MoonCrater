@@ -1,0 +1,15 @@
+[Unit]
+Description=MoonCrater local Ansible onboarding tests
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=apache
+Group=apache
+Environment=MOONCRATER_ENV_FILE=/etc/mooncrater/apache-env.conf
+ExecStart=/usr/bin/php /opt/mooncrater/bin/process-onboarding-local.php
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+TimeoutStartSec=75

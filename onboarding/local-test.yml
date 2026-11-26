@@ -1,0 +1,11 @@
+---
+- name: Exercise the onboarding worker locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Return a controlled result
+      ansible.builtin.assert:
+        that: local_test_outcome == 'success'
+        success_msg: Local test passed
+        fail_msg: Intentional local test failure

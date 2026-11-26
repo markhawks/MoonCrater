@@ -58,7 +58,7 @@ if [[ ${MOONCRATER_RPM_SETUP:-no} != yes ]]; then
     dnf install -y \
         httpd php php-cli php-pgsql php-mbstring \
         postgresql postgresql-server policycoreutils-python-utils \
-        firewalld git openssh-server
+        firewalld git openssh-server openssh-clients python3 ansible-core
 fi
 
 info 'Installing application files'

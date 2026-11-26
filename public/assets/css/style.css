@@ -468,11 +468,55 @@ td.warn-text {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 92px;
-    min-height: 76px;
+    min-width: 76px;
     box-sizing: border-box;
-    padding: 10px 12px;
+    padding: 6px 8px;
     border: 1px solid rgba(255, 255, 255, .12);
     border-radius: 6px;
     background: rgba(0, 0, 0, .16);
+}
+
+.inventory-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.inventory-summary-counts {
+    display: flex;
+    flex: 1 1 640px;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.inventory-summary-counts > div {
+    flex: 1 1 auto;
+}
+
+.inventory-onboarding-link {
+    display: grid;
+    flex: 0 1 190px;
+    place-items: center;
+    padding: 12px;
+    border: 1px solid #5dade2;
+    border-radius: 6px;
+    background: #246292;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+
+.inventory-onboarding-link:hover,
+.inventory-onboarding-link:focus-visible {
+    background: #2c75a9;
+}
+
+@media (max-width: 900px) {
+    .inventory-onboarding-link {
+        flex: 1 1 100%;
+    }
 }
